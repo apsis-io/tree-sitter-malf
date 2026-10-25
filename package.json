@@ -1,0 +1,7 @@
+{
+  "name": "tree-sitter-malf",
+  "version": "0.1.0",
+  "main": "bindings/node",
+  "keywords": ["parser", "tree-sitter", "malf"],
+  "license": "LGPL-3.0"
+}

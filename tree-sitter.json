@@ -1,0 +1,16 @@
+{
+  "grammars": [
+    {
+      "name": "malf",
+      "abi": 15
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "LGPL-3.0",
+    "description": "Tree-sitter grammar for the Malformed (.malf) language",
+    "links": {
+      "repository": "https://github.com/apsis-io/ocaml_of_go"
+    }
+  }
+}
