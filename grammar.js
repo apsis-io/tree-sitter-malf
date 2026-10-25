@@ -124,7 +124,7 @@ module.exports = grammar({
 
     anonymous_function: ($) =>
       seq(
-        optional(field("mode", choice("local", "once"))),
+        optional(repeat1(choice("local", "once"))),
         "fn",
         $.parameter_list,
         optional(field("effects", $.effect_row)),

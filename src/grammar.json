@@ -653,8 +653,7 @@
           "type": "CHOICE",
           "members": [
             {
-              "type": "FIELD",
-              "name": "mode",
+              "type": "REPEAT1",
               "content": {
                 "type": "CHOICE",
                 "members": [
