@@ -66,7 +66,15 @@ module.exports = grammar({
     [$.extern_module_declaration],
     [$.world_declaration],
     [$.pattern, $.poly_variant],
+    [$.pattern, $.tuple_pattern],
+    [$._expression, $.tuple_pattern],
+    [$.argument_list, $.tuple_pattern],
+    [$.parenthesized_expression, $.argument_list],
     [$.poly_variant, $._expression],
+    [$.parenthesized_expression],
+    [$.for_statement, $.parenthesized_expression],
+    [$.for_statement, $.pattern],
+    [$.for_statement, $._expression, $.pattern],
   ],
 
   extras: ($) => [/\s/, $.comment_line],
@@ -203,14 +211,35 @@ module.exports = grammar({
       )),
 
     for_statement: ($) =>
-      seq(
-        "for",
-        field("variable", $.identifier),
-        "in",
-        field("iterable", $._expression),
-        optional(seq("..", field("end", $._expression))),
-        field("body", $.block),
+      choice(
+        // Go-style: `for { ... }`, `for cond { ... }`, `for init; cond; post { ... }`
+        seq("for", field("body", $.block)),
+        prec(1, seq(
+          "for",
+          field("init", choice($.let_statement, $.assignment)),
+          ";",
+          field("condition", optional($._expression)),
+          ";",
+          field("post", optional(choice($.assignment, $._expression))),
+          field("body", $.block),
+        )),
+        seq("for", field("condition", $._expression), field("body", $.block)),
+        // Range / collection: `for i in 0..n`, `for i, (a, b) in xs`
+        seq(
+          "for",
+          optional(seq(field("index", $.identifier), ",")),
+          field("variable", choice($.identifier, $.pattern)),
+          "in",
+          field("iterable", $._expression),
+          optional(choice(
+            seq("..", field("end", $._expression)),
+            seq("..=", field("end", $._expression)),
+          )),
+          field("body", $.block),
+        ),
       ),
+
+    parenthesized_expression: ($) => seq("(", $._expression, ")"),
 
     arrow_block: ($) => seq("{", "->", $._expression, "}"),
 
@@ -277,6 +306,7 @@ module.exports = grammar({
         $.call_expression,
         $.ufcs_expression,
         $.applied_identifier,
+        $.parenthesized_expression,
         $.deref_expression,
         $.cons_expression,
         $.binary_expression,
@@ -328,7 +358,8 @@ module.exports = grammar({
       prec(PREC.CALL, seq(field("function", $._expression), $.argument_list)),
 
     applied_identifier: ($) =>
-      prec.left(PREC.CALL, seq(field("fn", $.identifier), repeat1(field("arg", $.identifier)))),
+      prec.left(PREC.CALL, seq(field("fn", $.identifier),
+        repeat1(field("arg", choice($.identifier, $.integer, $.float, $.string, $.boolean, $.unit))))),
 
     argument_list: ($) => seq("(", commaSep($._expression), ")"),
 
@@ -425,7 +456,10 @@ module.exports = grammar({
         $.typed_pattern,
         $.constructor_pattern,
         $.poly_variant,
+        $.tuple_pattern,
       ),
+
+    tuple_pattern: ($) => seq("(", commaSep($.pattern), ")"),
 
     wildcard_pattern: ($) => "_",
     list_pattern: ($) => seq("[", commaSep($.pattern), "]"),
