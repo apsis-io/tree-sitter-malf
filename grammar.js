@@ -674,8 +674,10 @@ module.exports = grammar({
 
     // `{ op: node.op }`, `{ n = 0, ... }`, shorthand `{ file_id: }` —
     // field separators are commas or just whitespace.
-    // `{ op: node.op }`, `{ n = 0 }` — commas or just whitespace between fields.
+    // `{ op: node.op }`, `{ n = 0 }`, functional update
+    // `{ table with node_types = ... }` — commas or whitespace between fields.
     record_literal: ($) => seq("{",
+      optional(seq(field("base", $._expression), "with")),
       repeat1(seq(optional(","),
         field("name", $.identifier),
         choice(":", "="),
