@@ -953,6 +953,102 @@
     }
   },
   {
+    "type": "block_type",
+    "named": true,
+    "fields": {
+      "effects": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "effect_row",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "return": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "block_type",
+            "named": true
+          },
+          {
+            "type": "effect_arrow_type",
+            "named": true
+          },
+          {
+            "type": "generic_type",
+            "named": true
+          },
+          {
+            "type": "list_type",
+            "named": true
+          },
+          {
+            "type": "local_type",
+            "named": true
+          },
+          {
+            "type": "mode_type",
+            "named": true
+          },
+          {
+            "type": "record_type",
+            "named": true
+          },
+          {
+            "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
+            "named": true
+          },
+          {
+            "type": "type_variable",
+            "named": true
+          },
+          {
+            "type": "unit_type",
+            "named": true
+          }
+        ]
+      },
+      "return_effects": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "effect_row",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "parameter_list",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "boolean",
     "named": true,
     "fields": {}
@@ -1942,6 +2038,10 @@
         "required": true,
         "types": [
           {
+            "type": "block_type",
+            "named": true
+          },
+          {
             "type": "effect_arrow_type",
             "named": true
           },
@@ -1988,6 +2088,10 @@
       "multiple": false,
       "required": true,
       "types": [
+        {
+          "type": "block_type",
+          "named": true
+        },
         {
           "type": "effect_arrow_type",
           "named": true
@@ -2050,6 +2154,10 @@
       "multiple": false,
       "required": true,
       "types": [
+        {
+          "type": "block_type",
+          "named": true
+        },
         {
           "type": "effect_arrow_type",
           "named": true
@@ -2295,6 +2403,10 @@
         "required": true,
         "types": [
           {
+            "type": "block_type",
+            "named": true
+          },
+          {
             "type": "effect_arrow_type",
             "named": true
           },
@@ -2400,6 +2512,10 @@
         "multiple": false,
         "required": true,
         "types": [
+          {
+            "type": "block_type",
+            "named": true
+          },
           {
             "type": "effect_arrow_type",
             "named": true
@@ -3368,6 +3484,10 @@
           {
             "type": "operator_name",
             "named": true
+          },
+          {
+            "type": "type_identifier",
+            "named": true
           }
         ]
       },
@@ -3385,6 +3505,10 @@
         "multiple": false,
         "required": true,
         "types": [
+          {
+            "type": "block_type",
+            "named": true
+          },
           {
             "type": "effect_arrow_type",
             "named": true
@@ -3502,6 +3626,10 @@
         "required": false,
         "types": [
           {
+            "type": "block_type",
+            "named": true
+          },
+          {
             "type": "effect_arrow_type",
             "named": true
           },
@@ -3554,6 +3682,10 @@
           {
             "type": ".",
             "named": false
+          },
+          {
+            "type": "block_type",
+            "named": true
           },
           {
             "type": "effect_arrow_type",
@@ -3640,6 +3772,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "block_type",
+          "named": true
+        },
         {
           "type": "effect_arrow_type",
           "named": true
@@ -4843,6 +4979,10 @@
         "required": false,
         "types": [
           {
+            "type": "block_type",
+            "named": true
+          },
+          {
             "type": "effect_arrow_type",
             "named": true
           },
@@ -4947,6 +5087,10 @@
         "required": false,
         "types": [
           {
+            "type": "block_type",
+            "named": true
+          },
+          {
             "type": "effect_arrow_type",
             "named": true
           },
@@ -4993,6 +5137,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "block_type",
+          "named": true
+        },
         {
           "type": "effect_arrow_type",
           "named": true
@@ -5048,6 +5196,10 @@
         "multiple": false,
         "required": false,
         "types": [
+          {
+            "type": "block_type",
+            "named": true
+          },
           {
             "type": "effect_arrow_type",
             "named": true
@@ -5425,6 +5577,10 @@
         "required": true,
         "types": [
           {
+            "type": "block_type",
+            "named": true
+          },
+          {
             "type": "effect_arrow_type",
             "named": true
           },
@@ -5476,6 +5632,10 @@
       "multiple": false,
       "required": true,
       "types": [
+        {
+          "type": "block_type",
+          "named": true
+        },
         {
           "type": "effect_arrow_type",
           "named": true
@@ -5974,6 +6134,10 @@
       "required": true,
       "types": [
         {
+          "type": "block_type",
+          "named": true
+        },
+        {
           "type": "effect_arrow_type",
           "named": true
         },
@@ -6025,6 +6189,10 @@
         "required": false,
         "types": [
           {
+            "type": "block_type",
+            "named": true
+          },
+          {
             "type": "effect_arrow_type",
             "named": true
           },
@@ -6071,7 +6239,135 @@
         "required": true,
         "types": [
           {
+            "type": "anonymous_function",
+            "named": true
+          },
+          {
+            "type": "arrow_block",
+            "named": true
+          },
+          {
+            "type": "assignment",
+            "named": true
+          },
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
             "type": "block",
+            "named": true
+          },
+          {
+            "type": "boolean",
+            "named": true
+          },
+          {
+            "type": "call_expression",
+            "named": true
+          },
+          {
+            "type": "cons_expression",
+            "named": true
+          },
+          {
+            "type": "continue_expression",
+            "named": true
+          },
+          {
+            "type": "deref_expression",
+            "named": true
+          },
+          {
+            "type": "ellipsis",
+            "named": true
+          },
+          {
+            "type": "float",
+            "named": true
+          },
+          {
+            "type": "hole",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
+            "named": true
+          },
+          {
+            "type": "index_expression",
+            "named": true
+          },
+          {
+            "type": "integer",
+            "named": true
+          },
+          {
+            "type": "list",
+            "named": true
+          },
+          {
+            "type": "match_expression",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "perform_expression",
+            "named": true
+          },
+          {
+            "type": "poly_variant",
+            "named": true
+          },
+          {
+            "type": "question_postfix",
+            "named": true
+          },
+          {
+            "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "record_literal",
+            "named": true
+          },
+          {
+            "type": "splice_expression",
+            "named": true
+          },
+          {
+            "type": "string",
+            "named": true
+          },
+          {
+            "type": "try_expression",
+            "named": true
+          },
+          {
+            "type": "tuple_expression",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
+            "named": true
+          },
+          {
+            "type": "ufcs_expression",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          },
+          {
+            "type": "unit",
             "named": true
           }
         ]
@@ -6154,6 +6450,10 @@
           {
             "type": "identifier",
             "named": true
+          },
+          {
+            "type": "type_identifier",
+            "named": true
           }
         ]
       },
@@ -6161,6 +6461,10 @@
         "multiple": true,
         "required": false,
         "types": [
+          {
+            "type": "block_type",
+            "named": true
+          },
           {
             "type": "effect_arrow_type",
             "named": true
@@ -7212,6 +7516,10 @@
         "required": false,
         "types": [
           {
+            "type": "block_type",
+            "named": true
+          },
+          {
             "type": "effect_arrow_type",
             "named": true
           },
@@ -7267,6 +7575,10 @@
         "multiple": true,
         "required": true,
         "types": [
+          {
+            "type": "block_type",
+            "named": true
+          },
           {
             "type": "effect_arrow_type",
             "named": true
@@ -8378,6 +8690,10 @@
       "required": false,
       "types": [
         {
+          "type": "block_type",
+          "named": true
+        },
+        {
           "type": "effect_arrow_type",
           "named": true
         },
@@ -8432,6 +8748,10 @@
         "multiple": false,
         "required": true,
         "types": [
+          {
+            "type": "block_type",
+            "named": true
+          },
           {
             "type": "effect_arrow_type",
             "named": true
@@ -8509,6 +8829,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "block_type",
+          "named": true
+        },
         {
           "type": "effect_arrow_type",
           "named": true
@@ -8612,6 +8936,10 @@
       "required": true,
       "types": [
         {
+          "type": "block_type",
+          "named": true
+        },
+        {
           "type": "effect_arrow_type",
           "named": true
         },
@@ -8696,6 +9024,10 @@
         "required": false,
         "types": [
           {
+            "type": "block_type",
+            "named": true
+          },
+          {
             "type": "effect_arrow_type",
             "named": true
           },
@@ -8742,6 +9074,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "block_type",
+          "named": true
+        },
         {
           "type": "effect_arrow_type",
           "named": true
@@ -8803,6 +9139,10 @@
         "multiple": false,
         "required": true,
         "types": [
+          {
+            "type": "block_type",
+            "named": true
+          },
           {
             "type": "effect_arrow_type",
             "named": true

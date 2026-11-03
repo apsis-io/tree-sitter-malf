@@ -28,8 +28,20 @@ module.exports = grammar({
 
   conflicts: ($) => [
     [$._expression, $.pattern],
-    [$.record_literal, $.block],
     [$.dotted_name, $._expression],
+    [$.module_block_declaration, $.block_type, $._expression],
+    [$._expression, $._type],
+    [$._expression, $.parameter_list],
+    [$._expression, $.effect_row],
+    [$.parameter_list, $._expression, $.tuple_type, $.unit],
+    [$._expression, $.tuple_type],
+    [$.block_type, $.record_type, $.record_literal, $.block, $._expression],
+    [$.block, $.block_type],
+    [$.block, $.block_type, $.record_literal, $._expression],
+    [$.block_type, $.record_literal],
+    [$._expression, $.type_variable],
+    [$.record_literal, $.block],
+    [$.function_declaration, $.module_block_declaration, $._expression],
     [$.argument_list, $.tuple_expression],
     [$.parameter_list, $.tuple_type],
     [$.cons_expression, $.function_declaration],
@@ -38,10 +50,12 @@ module.exports = grammar({
     [$.cons_expression, $.effect_declaration],
     [$.cons_expression, $.infix_declaration],
     [$.operator_name, $._expression],
-    [$.call_expression, $.ufcs_expression],
     [$._expression, $.pattern, $.constructor_pattern],
     [$.function_declaration, $._expression],
     [$.module_block_declaration, $.function_declaration, $._expression],
+    [$.module_block_declaration, $.function_declaration, $._expression, $.block_type],
+    [$.function_declaration, $.block_type, $._expression],
+    [$.function_declaration, $.block_type],
     [$.module_block_declaration, $._expression],
     [$._expression, $._statement],
     [$.pattern, $.constructor_pattern],
@@ -148,7 +162,7 @@ module.exports = grammar({
         optional($.type_parameters),
         "::",
         optional(seq(field("annotation", $._type), "=")),
-        field("body", $.block),
+        field("body", choice($.block, $.record_literal, $._expression)),
       )),
 
     // `export default unwrap_or`
@@ -251,7 +265,7 @@ module.exports = grammar({
 
     function_declaration: ($) =>
       prec.right(seq(
-        field("name", choice($.identifier, $.operator_name, $.dotted_name)),
+        field("name", choice($.identifier, $.operator_name, $.dotted_name, $.type_identifier)),
         optional(field("type_params", $.type_parameters)),
         "::",
         paramLists($),
@@ -287,19 +301,19 @@ module.exports = grammar({
     type_parameters: ($) => seq("<", commaSep1($.type_identifier), ">"),
 
     parameter_list: ($) =>
-      choice(
+      prec(1, choice(
         $.unit,
         seq(
           "(",
           commaSep(
             choice(
-              seq(optional($.attribute), optional("local"), field("name", $.identifier), ":", field("type", $._type)),
+              seq(optional($.attribute), optional("local"), field("name", choice($.identifier, $.type_identifier)), ":", field("type", $._type)),
               field("type", $._type),
             ),
           ),
           ")",
         ),
-      ),
+      )),
 
     effect_row: ($) =>
       seq(
@@ -743,9 +757,24 @@ module.exports = grammar({
         $.list_type,
         $.effect_arrow_type,
         $.record_type,
+        $.block_type,
         $.local_type,
         $.mode_type,
       ),
+
+    // 1ML block type: `{ run :: (x: Int) [] -> Int [] }` — member signatures.
+    block_type: ($) =>
+      prec(1, seq("{",
+        repeat(seq(optional(","),
+          field("name", $.identifier),
+          "::",
+          paramLists($),
+          optional(field("effects", $.effect_row)),
+          "->",
+          field("return", $._type),
+          optional(field("return_effects", $.effect_row)),
+        )),
+        "}")),
 
     // Lowercase abstract type names, e.g. interface member `t` in `(a: t)`.
     type_variable: ($) => $.identifier,
