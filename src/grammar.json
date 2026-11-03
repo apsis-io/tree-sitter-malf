@@ -4173,8 +4173,15 @@
       ]
     },
     "_string_content": {
-      "type": "PATTERN",
-      "value": "[^\"\\\\]+"
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 2,
+        "content": {
+          "type": "PATTERN",
+          "value": "[^\\n\"\\\\]+"
+        }
+      }
     },
     "escape_sequence": {
       "type": "PATTERN",
@@ -5761,6 +5768,18 @@
                         {
                           "type": "SYMBOL",
                           "name": "wildcard_pattern"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "string"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "integer"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "boolean"
                         }
                       ]
                     }
@@ -6298,6 +6317,11 @@
     [
       "record_literal",
       "block"
+    ],
+    [
+      "record_literal",
+      "block",
+      "_expression"
     ],
     [
       "function_declaration",

@@ -41,6 +41,7 @@ module.exports = grammar({
     [$.block_type, $.record_literal],
     [$._expression, $.type_variable],
     [$.record_literal, $.block],
+    [$.record_literal, $.block, $._expression],
     [$.function_declaration, $.module_block_declaration, $._expression],
     [$.argument_list, $.tuple_expression],
     [$.parameter_list, $.tuple_type],
@@ -547,7 +548,8 @@ module.exports = grammar({
         repeat(choice($.escape_sequence, $._string_content)),
         '"',
       ),
-    _string_content: ($) => /[^"\\]+/,
+    // Lexical precedence above the `//` comment extra: `"//"` stays a string.
+    _string_content: ($) => token(prec(PREC.STRING, /[^\n"\\]+/)),
     escape_sequence: ($) => /\\[nrt\\"']/,
 
     list: ($) => seq("[", commaSep($._expression), "]"),
@@ -741,7 +743,7 @@ module.exports = grammar({
         field("constructor", $.type_identifier),
         optional(choice(
           seq("(", commaSep($.pattern), ")"),
-          repeat1(field("arg", choice($.identifier, $.wildcard_pattern))),
+          repeat1(field("arg", choice($.identifier, $.wildcard_pattern, $.string, $.integer, $.boolean))),
         )),
       ),
 
