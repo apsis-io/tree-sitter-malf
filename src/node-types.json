@@ -1454,6 +1454,21 @@
     }
   },
   {
+    "type": "constraint_block",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "type_constraint",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "constructor_pattern",
     "named": true,
     "fields": {
@@ -3318,6 +3333,16 @@
           }
         ]
       },
+      "constraints": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "constraint_block",
+            "named": true
+          }
+        ]
+      },
       "effects": {
         "multiple": false,
         "required": false,
@@ -4769,6 +4794,30 @@
           }
         ]
       },
+      "label": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "label_kind": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "operator_name",
+            "named": true
+          }
+        ]
+      },
       "op": {
         "multiple": false,
         "required": true,
@@ -4846,6 +4895,10 @@
         },
         {
           "type": "parameter_list",
+          "named": true
+        },
+        {
+          "type": "prec_ref_group",
           "named": true
         }
       ]
@@ -6554,6 +6607,25 @@
     }
   },
   {
+    "type": "prec_ref_group",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "operator_name",
+          "named": true
+        },
+        {
+          "type": "prec_ref_word",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "question_postfix",
     "named": true,
     "fields": {},
@@ -8215,6 +8287,72 @@
     }
   },
   {
+    "type": "type_constraint",
+    "named": true,
+    "fields": {
+      "constraint": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "effect_arrow_type",
+            "named": true
+          },
+          {
+            "type": "generic_type",
+            "named": true
+          },
+          {
+            "type": "list_type",
+            "named": true
+          },
+          {
+            "type": "local_type",
+            "named": true
+          },
+          {
+            "type": "mode_type",
+            "named": true
+          },
+          {
+            "type": "record_type",
+            "named": true
+          },
+          {
+            "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
+            "named": true
+          },
+          {
+            "type": "type_variable",
+            "named": true
+          },
+          {
+            "type": "unit_type",
+            "named": true
+          }
+        ]
+      },
+      "subject": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "type_constructor",
     "named": true,
     "fields": {
@@ -8913,6 +9051,10 @@
     "named": false
   },
   {
+    "type": "!:",
+    "named": false
+  },
+  {
     "type": "!=",
     "named": false
   },
@@ -9186,6 +9328,10 @@
     "named": false
   },
   {
+    "type": "infixc",
+    "named": false
+  },
+  {
     "type": "infixl",
     "named": false
   },
@@ -9254,6 +9400,14 @@
     "named": false
   },
   {
+    "type": "prec:",
+    "named": false
+  },
+  {
+    "type": "prec_ref_word",
+    "named": true
+  },
+  {
     "type": "prefix",
     "named": false
   },
@@ -9300,6 +9454,10 @@
   {
     "type": "unit_type",
     "named": true
+  },
+  {
+    "type": "where",
+    "named": false
   },
   {
     "type": "wildcard_pattern",

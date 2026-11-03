@@ -108,13 +108,23 @@ module.exports = grammar({
       ))),
 
     // `export infixl 4 (<=>) :: (fwd: A -> B) [] -> Proj<A, B> { ... }`
+    // Relative precedence references: `(prec:above:(+) prec:below:(*))`,
+    // `(prec:add / prec:(+))`, `(prec:cmp)`, `(prec:bit_*)`.
+    prec_ref_group: ($) =>
+      seq("(", "prec:",
+        repeat1(choice($.prec_ref_word, $.operator_name, "/", ":")),
+        ")"),
+
+    prec_ref_word: ($) => token(/[a-z_][a-zA-Z0-9_*.]*/),
+
     // Binding-site fixity: `export infixl 4 (<=>) :: ... = Proj.iso` and
     // bare operator aliases: `infixr 8 (**)`.
     infix_declaration: ($) =>
       prec.right(seq(
         optional("export"),
-        choice("prefix", "infix", "infixl", "infixr", "postfix"),
-        optional($.integer),
+        choice("prefix", "infix", "infixl", "infixr", "infixc", "postfix"),
+        optional(seq(field("label", $.identifier), ":", field("label_kind", choice($.identifier, $.operator_name)))),
+        optional(choice($.integer, $.prec_ref_group)),
         field("op", $.operator_name),
         optional(
           seq(
@@ -165,7 +175,7 @@ module.exports = grammar({
         "}"),
 
     skin_binding: ($) =>
-      seq(choice("prefix", "infix", "infixl", "infixr", "postfix"),
+      seq(choice("prefix", "infix", "infixl", "infixr", "infixc", "postfix"),
         $.integer, $.string, "<=>", field("op", $.type_identifier)),
 
     skin_rule: ($) =>
@@ -249,9 +259,19 @@ module.exports = grammar({
         "->",
         field("return_type", $._type),
         optional(field("return_effects", $.effect_row)),
+        optional(seq("where", field("constraints", $.constraint_block))),
         optional(seq("=", field("body_expr", choice($.extern_target, $._expression)))),
         optional(field("body", $.block)),
       )),
+
+    // `where { T !: (_ -> _) }` — type-constraint block between the
+    // signature and the body.
+    constraint_block: ($) =>
+      seq("{", repeat(seq($.type_constraint, optional(";"))), "}"),
+
+    type_constraint: ($) =>
+      seq(field("subject", choice($.type_identifier, $.identifier)),
+        "!:", field("constraint", $._type)),
 
     operator_name: ($) =>
       seq("(", choice(
