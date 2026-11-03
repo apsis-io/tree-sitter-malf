@@ -1,7 +1,7 @@
 /**
  * tree-sitter grammar for the Malformed (.malf) language.
  * Highlight-grade: precise enough for editor coloring, bracket structure,
- * and comment detection. Not a full semantic parser — the oxgo/malf
+ * and comment detection. Not a full semantic parser - the oxgo/malf
  * toolchain performs the real 6-stratum verification.
  */
 
@@ -28,61 +28,43 @@ module.exports = grammar({
 
   conflicts: ($) => [
     [$._expression, $.pattern],
-    [$.function_declaration, $._expression, $.pattern],
-    [$.declaration, $._expression, $.pattern],
+    [$.record_literal, $.block],
+    [$.dotted_name, $._expression],
+    [$.argument_list, $.tuple_expression],
+    [$.parameter_list, $.tuple_type],
+    [$.cons_expression, $.function_declaration],
+    [$.cons_expression, $.module_block_declaration],
+    [$.cons_expression, $.extern_declaration],
+    [$.cons_expression, $.effect_declaration],
+    [$.cons_expression, $.infix_declaration],
+    [$.operator_name, $._expression],
+    [$.call_expression, $.ufcs_expression],
     [$._expression, $.pattern, $.constructor_pattern],
-    [$.declaration, $._statement],
-    [$.declaration, $._statement, $._expression, $.pattern],
+    [$.function_declaration, $._expression],
+    [$.module_block_declaration, $.function_declaration, $._expression],
+    [$.module_block_declaration, $._expression],
     [$._expression, $._statement],
     [$.pattern, $.constructor_pattern],
-    [$.gadt_type_declaration, $.type_declaration],
     [$.for_statement, $._expression],
-    [$.arrow_block, $.block],
-    [$.question_postfix, $._expression],
-    [$.question_postfix, $.splice_expression],
     [$.list, $.list_pattern],
-    [$._expression, $.list_pattern],
-    [$.declaration, $.interface_declaration],
     [$.interface_declaration],
-    [$.declaration],
     [$.let_statement, $.pattern],
-    [$.let_statement, $._expression, $.pattern],
-    [$.let_statement, $.perform_expression],
     [$.anonymous_function, $._expression],
-    [$.comptime_expression, $.call_expression],
-    [$.comptime_expression, $.ufcs_expression],
-    [$.quote_expression, $.comptime_expression, $.call_expression, $.ufcs_expression],
-    [$.type_declaration, $._type],
     [$.try_expression],
-    [$.try_expression, $._expression],
-    [$.constructor_pattern],
-    [$.applied_identifier, $._expression],
-    [$.type_variable, $._expression],
-    [$.type_variable, $.pattern],
-    [$.pattern, $.type_variable],
-    [$.record_literal, $.block],
-    [$.function_declaration],
     [$.extern_type_declaration],
     [$.extern_module_declaration],
-    [$.world_declaration],
-    [$.pattern, $.poly_variant],
-    [$.pattern, $.tuple_pattern],
-    [$._expression, $.tuple_pattern],
-    [$.argument_list, $.tuple_pattern],
     [$.parenthesized_expression, $.argument_list],
-    [$.poly_variant, $._expression],
-    [$.parenthesized_expression],
-    [$.for_statement, $.parenthesized_expression],
     [$.for_statement, $.pattern],
-    [$.for_statement, $._expression, $.pattern],
+    [$._expression, $.constructor_pattern],
+    [$.extern_member, $.function_declaration],
   ],
 
   extras: ($) => [/\s/, $.comment_line],
 
   rules: {
-    source_file: ($) => repeat($._item),
+    source_file: ($) => repeat(seq($._item, optional(";"))),
 
-    _item: ($) => choice($.declaration, $._expression, $._statement),
+    _item: ($) => choice($.declaration, $._expression, $._statement, $.attribute),
 
     // ============================ declarations ============================
 
@@ -103,36 +85,141 @@ module.exports = grammar({
         $.extern_module_declaration,
         $.extend_type_declaration,
         $.world_declaration,
+        $.export_declaration,
+        $.export_default_declaration,
+        $.export_star_declaration,
+        $.skin_declaration,
+        $.infix_declaration,
+        $.module_block_declaration,
       )),
 
+    // `export f :: ...`, `export type X = ...`, ...
+    export_declaration: ($) =>
+      seq("export", field("decl", choice(
+        $.function_declaration,
+        $.type_declaration,
+        $.gadt_type_declaration,
+        $.let_statement,
+        $.extern_declaration,
+        $.effect_declaration,
+        $.interface_declaration,
+        $.module_declaration,
+        $.module_block_declaration,
+      ))),
+
+    // `export infixl 4 (<=>) :: (fwd: A -> B) [] -> Proj<A, B> { ... }`
+    // Binding-site fixity: `export infixl 4 (<=>) :: ... = Proj.iso` and
+    // bare operator aliases: `infixr 8 (**)`.
+    infix_declaration: ($) =>
+      prec.right(seq(
+        optional("export"),
+        choice("prefix", "infix", "infixl", "infixr", "postfix"),
+        optional($.integer),
+        field("op", $.operator_name),
+        optional(
+          seq(
+            "::",
+            paramLists($),
+            optional(field("effects", $.effect_row)),
+            "->",
+            field("return_type", $._type),
+            optional(field("return_effects", $.effect_row)),
+            optional(seq("=", field("body_expr", choice($.extern_target, $._expression)))),
+            optional(field("body", $.block)),
+          ),
+        ),
+      )),
+
+    // 1ML unified member block: `FormatterGolden :: { validate :: ... }`,
+    // `export RootUnit :: { ... }`
+    module_block_declaration: ($) =>
+      prec.right(seq(
+        field("name", choice($.identifier, $.type_identifier)),
+        optional($.type_parameters),
+        "::",
+        optional(seq(field("annotation", $._type), "=")),
+        field("body", $.block),
+      )),
+
+    // `export default unwrap_or`
+    export_default_declaration: ($) =>
+      seq("export", "default", field("name", choice($.identifier, $.operator_name))),
+
+    // `export * from "std/syntax"`, `export * as Prelude from "std/prelude"`
+    export_star_declaration: ($) =>
+      seq("export", "*", optional(seq("as", field("alias", $.type_identifier))),
+        "from", field("path", choice($.string, $.import_uri, $.identifier))),
+
+    // `export skin go <=> Ast { ... }` — lexer config, precedence bindings,
+    // and HCLP rule declarations with quote templates.
+    skin_declaration: ($) =>
+      seq(optional("export"), "skin", field("name", $.identifier), "<=>",
+        field("target", $.type_identifier), "{",
+        repeat(choice($.skin_lexer, $.skin_binding, $.skin_rule, $._statement, $._expression)),
+        "}"),
+
+    skin_lexer: ($) =>
+      seq("lexer", "{",
+        repeat(seq(seq(field("name", $.identifier), ":", field("value", $._expression)),
+          optional(","))),
+        "}"),
+
+    skin_binding: ($) =>
+      seq(choice("prefix", "infix", "infixl", "infixr", "postfix"),
+        $.integer, $.string, "<=>", field("op", $.type_identifier)),
+
+    skin_rule: ($) =>
+      seq("rule", field("name", $.identifier), "(",
+        repeat1(choice(
+          $.string,
+          seq(optional(field("label", $.identifier)), ":", field("item", $.identifier)),
+          $.identifier,
+        )),
+        ")", "<=>", field("template", $.quote_expression)),
+
     // Host interop: `extern f :: (x: T) [E] -> R = go:path.Sym`
+    // Quoted qualified names: `extern "Code.run" :: (c: Code<T>). [] -> T = "__stdlib_runcode_run"`
     extern_declaration: ($) =>
-      seq("extern", field("name", $.identifier), "::",
-        repeat($.parameter_list),
+      seq("extern", field("name", choice($.identifier, $.extern_name, $.dotted_name)), "::",
+        paramLists($),
         optional(field("effects", $.effect_row)),
         "->",
         field("return_type", $._type),
+        optional(field("return_effects", $.effect_row)),
         "=",
         field("target", $.extern_target)),
 
-    extern_target: ($) => token(/(go|wit):[^\s{}]+/),
+    extern_target: ($) => prec(2, choice($.string, $.identifier,
+      token(/(go|wit):[^\s{}]+/), $.dotted_name)),
+
+    // Quoted dot-qualified extern names lex as opaque tokens so the `.` in
+    // `"Code.run"` never parses as a UFCS receiver.
+    extern_name: ($) => token(seq('"', /[^"\s]+/, '"')),
+
+    // Bare dotted declaration names: `Teleos.converge_chain`, `FwdProj.make`,
+    // `Bool.and`. Competes with UFCS `Type.member` access; resolved through
+    // the declared conflict with `_expression`.
+    dotted_name: ($) => seq($.type_identifier, ".", $.identifier),
 
     extern_type_declaration: ($) =>
-      seq("extern", "type", field("name", $.type_identifier), "=",
+      seq("extern", "type", field("name", $.type_identifier),
+        optional($.type_parameters), "=",
         field("target", $.extern_target),
         optional(seq("{", repeat($.extern_member), "}"))),
 
     extern_module_declaration: ($) =>
-      seq("extern", "module", field("name", $.type_identifier), "=",
+      seq("extern", "module", field("name", $.type_identifier),
+        optional($.type_parameters), "=",
         field("target", $.extern_target),
         optional(seq("{", repeat($.extern_member), "}"))),
 
     extern_member: ($) =>
-      seq(field("name", $.identifier), "::",
-        repeat($.parameter_list),
+      seq(field("name", choice($.identifier, $.extern_name)), "::",
+        paramLists($),
         optional(field("effects", $.effect_row)),
         "->",
         field("return_type", $._type),
+        optional(field("return_effects", $.effect_row)),
         "=",
         field("target", $.extern_target)),
 
@@ -151,31 +238,96 @@ module.exports = grammar({
       seq("effect", field("name", $.type_identifier), "::", $._type),
 
     function_declaration: ($) =>
-      seq(
-        field("name", choice($.identifier, $.operator_name)),
+      prec.right(seq(
+        field("name", choice($.identifier, $.operator_name, $.dotted_name)),
         optional(field("type_params", $.type_parameters)),
         "::",
-        repeat($.parameter_list),
+        paramLists($),
         optional(field("effects", $.effect_row)),
         "->",
         field("return_type", $._type),
-        optional(seq("=", field("target", $.extern_target))),
-        field("body", $.block),
-      ),
+        optional(field("return_effects", $.effect_row)),
+        optional(seq("=", field("body_expr", choice($.extern_target, $._expression)))),
+        optional(field("body", $.block)),
+      )),
 
     operator_name: ($) =>
-      seq("(", token(choice("+", "-", "*", "/", "%", "^", "==", "!=",
-        "<", ">", "<=", ">=", "&&", "||", "|>")), ")"),
+      seq("(", choice(
+        token(choice("+", "-", "*", "/", "%", "^", "==", "!=",
+          "<", ">", "<=", ">=", "&&", "||", "|>", "<=>", "<~", "~>", "<~>",
+          "<|>", "??", "-.", "!", "~", "**", "*.", "/.", "+.", "-.", "++", "@", "<+>", "<->",
+          "<*>", "<$>", "::", ":=", "<-", "<<", "<<=", "<==", "<>", "=>>", ">>", ">>=",
+          ">>>", "|>>", "=")),
+        // word operator sections: `(not)`, `(deref)`
+        $.identifier,
+      ), ")"),
 
-    type_parameters: ($) => seq("<", repeat1($.type_identifier), ">"),
+    type_parameters: ($) => seq("<", commaSep1($.type_identifier), ">"),
 
     parameter_list: ($) =>
-      seq("(", commaSep(seq(optional("local"), field("name", $.identifier), ":", field("type", $._type))), ")"),
+      choice(
+        $.unit,
+        seq(
+          "(",
+          commaSep(
+            choice(
+              seq(optional($.attribute), optional("local"), field("name", $.identifier), ":", field("type", $._type)),
+              field("type", $._type),
+            ),
+          ),
+          ")",
+        ),
+      ),
 
-    effect_row: ($) => seq("[", commaSep(choice($.type_identifier, $.hole)), "]"),
+    effect_row: ($) =>
+      seq(
+        "[",
+        commaSep(choice(
+          $.type_identifier,
+          $.identifier,
+          $.hole,
+          // rest rows: `[..E]`
+          seq("..", choice($.identifier, $.type_identifier)),
+        )),
+        optional(seq("|", choice($.type_identifier, $.identifier, $.hole))),
+        "]",
+      ),
 
     type_declaration: ($) =>
-      seq("type", field("name", $.type_identifier), optional(seq("=", choice($.type_identifier, $._type)))),
+      seq(
+        "type",
+        field("name", $.type_identifier),
+        optional($.type_parameters),
+        optional(seq("=", field("value", $.type_value))),
+      ),
+
+    // RHS of a type binding: a plain type (incl. records), a constructor
+    // application (`FwdProj(A -> B)`), or a bar-list of variants
+    // (`= | None | Some(A)`).
+    type_value: ($) =>
+      choice(
+        $._type,
+        $.type_constructor,
+        repeat1($.type_variant),
+      ),
+
+    type_constructor: ($) =>
+      prec(PREC.CALL, seq(field("constructor", $.type_identifier),
+        "(", commaSep($._type), ")")),
+
+    record_type: ($) =>
+      seq("{",
+        repeat1(seq(optional(","), optional("mut"),
+          field("name", $.identifier), ":", field("type", $._type))),
+        optional(seq("|", field("extend", $._type))),
+        "}"),
+
+    type_variant: ($) =>
+      prec.right(seq("|", field("name", $.type_identifier),
+        optional(choice(
+          seq("(", commaSep($._type), ")"),
+          seq(choice("::", ":"), field("signature", $._type)),
+        )))),
 
     gadt_type_declaration: ($) =>
       seq(
@@ -206,7 +358,7 @@ module.exports = grammar({
 
     _gadt_signature: ($) =>
       prec.right(seq(
-        repeat1($.parameter_list),
+        repeat1(seq($.parameter_list, optional("."))),
         optional(seq("->", field("return", $._type))),
       )),
 
@@ -250,16 +402,39 @@ module.exports = grammar({
 
     _type_member: ($) =>
       choice(
-        seq(field("name", $.identifier), "::", repeat($.parameter_list), "->", field("type", $._type)),
+        seq(
+          field("name", $.identifier),
+          "::",
+          paramLists($),
+          optional(field("effects", $.effect_row)),
+          "->",
+          field("type", $._type),
+          optional(field("return_effects", $.effect_row)),
+        ),
         seq("type", field("name", choice($.identifier, $.type_identifier)), optional(seq("=", $._type))),
       ),
 
-    module_declaration: ($) => seq("module", field("name", $.type_identifier)),
+    module_declaration: ($) =>
+      prec.right(seq("module", field("name", $.type_identifier), optional("="), optional(field("body", $.block)))),
 
     implicit_declaration: ($) =>
       seq("implicit", "module", field("name", $.type_identifier), ":", field("signature", $.type_identifier)),
 
-    import_declaration: ($) => seq("import", field("path", $.identifier)),
+    // `import "std/proj"`, `import { A, B } from "std/syntax"`,
+    // `import { Fixpoint } from velocity:teleos`, and legacy `import foo`
+    import_declaration: ($) =>
+      seq("import",
+        choice(
+          field("path", choice($.identifier, $.string, $.import_uri)),
+          // `import * from std:proj`
+          seq("*", optional("from"),
+            field("path", choice($.import_uri, $.string, $.identifier))),
+          seq("{", commaSep(field("item", choice($.identifier, $.type_identifier))), "}",
+            optional("from"),
+            field("path", choice($.import_uri, $.string, $.identifier))),
+        )),
+
+    import_uri: ($) => token(/[a-z][a-zA-Z0-9_]*(\.[a-z][a-zA-Z0-9_]*)*:[A-Za-z0-9_./#@-]+/),
 
     let_statement: ($) =>
       seq(
@@ -277,7 +452,7 @@ module.exports = grammar({
       seq(
         optional(repeat1(choice("local", "once"))),
         "fn",
-        $.parameter_list,
+        paramLists($),
         optional(field("effects", $.effect_row)),
         "->",
         field("body", choice($._expression, $.block)),
@@ -300,12 +475,10 @@ module.exports = grammar({
         $.hole,
         $.perform_expression,
         $.continue_expression,
-        $.comptime_expression,
         $.quote_expression,
         $.splice_expression,
-        $.call_expression,
         $.ufcs_expression,
-        $.applied_identifier,
+        $.call_expression,
         $.parenthesized_expression,
         $.deref_expression,
         $.cons_expression,
@@ -317,7 +490,11 @@ module.exports = grammar({
         $.block,
         $.arrow_block,
         $.question_postfix,
-        $.pattern,
+        $.record_literal,
+        $.poly_variant,
+        $.unary_expression,
+        $.tuple_expression,
+        $.index_expression,
       ),
 
     identifier: ($) => /[a-z_][a-zA-Z0-9_']*/,
@@ -350,21 +527,33 @@ module.exports = grammar({
       prec.right(PREC.CALL, seq("continue", field("continuation", $.identifier),
         optional(choice($.argument_list, repeat1($._expression))))),
 
-    comptime_expression: ($) => prec(PREC.CALL, seq("comptime", $._expression)),
     quote_expression: ($) => seq("<[", $._expression, "]>"),
-    splice_expression: ($) => prec(PREC.UNARY, seq("~", $._expression)),
+    splice_expression: ($) => seq("$(", $._expression, ")"),
 
+    // Bracket indexing: `g.op[i]`, `args[i]`
+    index_expression: ($) =>
+      prec(PREC.CALL, seq(field("receiver", $._expression), "[", $._expression, "]")),
+
+    // Application: `f(a, b)` calls, `f x y` / `op_tag OpNeg` / `EInt 0`
+    // juxtaposition, and mixed `Ctor (x) y` forms.
     call_expression: ($) =>
-      prec(PREC.CALL, seq(field("function", $._expression), $.argument_list)),
-
-    applied_identifier: ($) =>
-      prec.left(PREC.CALL, seq(field("fn", $.identifier),
-        repeat1(field("arg", choice($.identifier, $.integer, $.float, $.string, $.boolean, $.unit))))),
+      prec.left(PREC.CALL, seq(
+        field("function", $._expression),
+        repeat1(choice(
+          $.argument_list,
+          field("arg", choice($.identifier, $.type_identifier, $.integer,
+            $.float, $.string, $.boolean, $.unit)),
+        )))),
 
     argument_list: ($) => seq("(", commaSep($._expression), ")"),
 
+    // `r.method(x)`, field chains `res.red.green_id`, index access `args.(i)`
     ufcs_expression: ($) =>
-      prec(PREC.CALL, seq(field("receiver", $._expression), ".", field("method", $.identifier), $.argument_list)),
+      prec.right(PREC.CALL, seq(field("receiver", $._expression), ".",
+        choice(
+          seq(field("method", $.identifier), optional($.argument_list)),
+          $.argument_list,
+        ))),
 
     cons_expression: ($) =>
       prec.right(
@@ -374,7 +563,7 @@ module.exports = grammar({
 
     binary_expression: ($) =>
       choice(
-        prec.left(PREC.PIPE, seq($._expression, "|>", $._expression)),
+        prec.left(PREC.PIPE, seq($._expression, choice("|>", "<~", "~>"), $._expression)),
         prec.left(PREC.OR, seq($._expression, "||", $._expression)),
         prec.left(PREC.AND, seq($._expression, "&&", $._expression)),
         prec.left(PREC.COMPARE, seq($._expression, choice("==", "!=", "<", ">", "<=", ">="), $._expression)),
@@ -400,14 +589,27 @@ module.exports = grammar({
         "}",
       ),
 
-    match_arm: ($) => seq("|", field("pattern", $.pattern), "->", field("body", $._expression)),
+    match_arm: ($) =>
+      seq("|", field("pattern", $.pattern),
+        optional(seq("if", field("guard", $._expression))),
+        "->", field("body", $._expression)),
 
     if_expression: ($) =>
-      seq(
-        "if",
-        field("condition", $._expression),
-        field("then", $.block),
-        optional(seq("else", field("else", choice($.block, $.if_expression)))),
+      choice(
+        prec.right(seq(
+          "if",
+          field("condition", $._expression),
+          field("then", $.block),
+          optional(seq("else", field("else", choice($.block, $.if_expression)))),
+        )),
+        prec.right(seq(
+          "if",
+          field("condition", $._expression),
+          "then",
+          field("then", $._expression),
+          "else",
+          field("else", $._expression),
+        )),
       ),
 
     try_expression: ($) =>
@@ -415,7 +617,9 @@ module.exports = grammar({
         "try",
         field("body", $._expression),
         "with",
+        optional("{"),
         repeat1($.handler_arm),
+        optional("}"),
       ),
 
     handler_arm: ($) =>
@@ -429,11 +633,39 @@ module.exports = grammar({
         field("body", $._expression),
       ),
 
-    block: ($) => seq("{", repeat(choice($._statement, $._expression)), "}"),
-
-    record_literal: ($) => seq("{",
-      commaSep(seq(field("name", $.identifier), "=", field("value", $._expression))),
+    // Block bodies hold statements/expressions plus member declarations
+    // (nested fns in unified blocks, `@entrypoint` attributes, `;` separators).
+    block: ($) => seq("{",
+      repeat(seq(choice(
+        $._statement,
+        $._expression,
+        $.function_declaration,
+        $.type_declaration,
+        $.extern_declaration,
+        $.effect_declaration,
+        $.module_block_declaration,
+        $.export_declaration,
+        $.export_star_declaration,
+        $.attribute,
+      ), optional(";"))),
       "}"),
+
+    // `{ op: node.op }`, `{ n = 0, ... }`, shorthand `{ file_id: }` —
+    // field separators are commas or just whitespace.
+    // `{ op: node.op }`, `{ n = 0 }` — commas or just whitespace between fields.
+    record_literal: ($) => seq("{",
+      repeat1(seq(optional(","),
+        field("name", $.identifier),
+        choice(":", "="),
+        field("value", $._expression),
+      )),
+      "}"),
+
+    unary_expression: ($) =>
+      prec.left(PREC.UNARY + 1, seq(choice("!", "-"), $._expression)),
+
+    tuple_expression: ($) =>
+      prec(-1, seq("(", $._expression, repeat1(seq(",", $._expression)), ")")),
 
     poly_variant: ($) => prec.left(PREC.CALL,
       seq("`", choice($.type_identifier, $.identifier), optional($.argument_list))),
@@ -486,6 +718,7 @@ module.exports = grammar({
         $.tuple_type,
         $.list_type,
         $.effect_arrow_type,
+        $.record_type,
         $.local_type,
         $.mode_type,
       ),
@@ -500,7 +733,7 @@ module.exports = grammar({
 
     unit_type: ($) => "Unit",
 
-    tuple_type: ($) => prec(-1, seq("(", commaSep($._type), ")")),
+    tuple_type: ($) => choice($.unit, prec(-1, seq("(", commaSep($._type), ")"))),
 
     list_type: ($) => prec(PREC.CALL, seq(field("elem", $._type), "list")),
 
@@ -518,7 +751,7 @@ module.exports = grammar({
     local_type: ($) => prec.right(PREC.UNARY, seq("local", $._type)),
 
     mode_type: ($) => prec.right(PREC.UNARY, seq(
-      choice("unique", "once", "many", "aliased", "global",
+      choice("unique", "once", "many", "aliased", "global", "lazy",
         "portable", "frozen", "shared", "contended"),
       $._type)),
 
@@ -528,6 +761,12 @@ module.exports = grammar({
 
 function commaSep(rule) {
   return optional(commaSep1(rule));
+}
+
+// Zero or more parameter groups, each optionally followed by the tight
+// receiver mark: `(opt: Option<T>). (f: A -> B) [] -> Option<B>`
+function paramLists($) {
+  return repeat(seq($.parameter_list, optional(".")));
 }
 
 function commaSep1(rule) {

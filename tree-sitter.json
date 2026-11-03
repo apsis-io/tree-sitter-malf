@@ -2,6 +2,8 @@
   "grammars": [
     {
       "name": "malf",
+      "scope": "source.malf",
+      "file-types": ["malf"],
       "abi": 15
     }
   ],

@@ -1,0 +1,407 @@
+==================
+export declarations
+==================
+
+export is_some<T> :: (opt: Option<T>). [] -> Bool {
+  match opt {
+  | Some(_) -> true
+  | None -> false
+  }
+}
+
+export default unwrap_or
+
+---
+
+(source_file
+  (declaration
+    (export_declaration
+      decl: (function_declaration
+        name: (identifier)
+        type_params: (type_parameters
+          (type_identifier))
+        (parameter_list
+          name: (identifier)
+          type: (generic_type
+            constructor: (type_identifier)
+            (type_identifier)))
+        effects: (effect_row)
+        return_type: (type_identifier)
+        body: (block
+          (match_expression
+            scrutinee: (identifier)
+            (match_arm
+              pattern: (pattern
+                (constructor_pattern
+                  constructor: (type_identifier)
+                  (pattern
+                    (wildcard_pattern))))
+              body: (boolean))
+            (match_arm
+              pattern: (pattern
+                (type_identifier))
+              body: (boolean)))))))
+  (declaration
+    (export_default_declaration
+      name: (identifier))))
+
+==================
+extern declarations
+==================
+
+extern "Code.run" :: (c: Code<T>). [] -> T = "__stdlib_runcode_run"
+extern type Obs<T> = "__stdlib_obs"
+extern module STM = "go:stm" { commit :: (t: T) [] -> Bool = go:stm.Commit }
+
+---
+
+(source_file
+  (declaration
+    (extern_declaration
+      name: (extern_name)
+      (parameter_list
+        name: (identifier)
+        type: (generic_type
+          constructor: (type_identifier)
+          (type_identifier)))
+      effects: (effect_row)
+      return_type: (type_identifier)
+      target: (extern_target
+        (string))))
+  (declaration
+    (extern_type_declaration
+      name: (type_identifier)
+      (type_parameters
+        (type_identifier))
+      target: (extern_target
+        (string))))
+  (declaration
+    (extern_module_declaration
+      name: (type_identifier)
+      target: (extern_target
+        (string))
+      (extern_member
+        name: (identifier)
+        (parameter_list
+          name: (identifier)
+          type: (type_identifier))
+        effects: (effect_row)
+        return_type: (type_identifier)
+        target: (extern_target)))))
+
+==================
+import forms
+==================
+
+import "std/proj"
+import { ByteSpan, SpanArena } from std:span
+import { count_green_comments, green_to_text } from "std/cst"
+import legacy_bare
+
+---
+
+(source_file
+  (declaration
+    (import_declaration
+      path: (string)))
+  (declaration
+    (import_declaration
+      item: (type_identifier)
+      item: (type_identifier)
+      path: (import_uri)))
+  (declaration
+    (import_declaration
+      item: (identifier)
+      item: (identifier)
+      path: (string)))
+  (declaration
+    (import_declaration
+      path: (identifier))))
+
+==================
+type declarations
+==================
+
+type Option<A> =
+  | None
+  | Some(A)
+
+export type Seq<T> =
+  | SeqEmpty
+  | SeqNext(T, Unit -> Seq<T>)
+
+export type FwdProj<A, B> = FwdProj(A -> B)
+export type Proj<A, B> = Proj(A -> B, A -> B -> A)
+
+export type ByteSpan = {
+  file_id: Int,
+  start: Int,
+  end: Int
+}
+
+type Rec<T> = { val: T | R }
+
+---
+
+(source_file
+  (declaration
+    (type_declaration
+      name: (type_identifier)
+      (type_parameters
+        (type_identifier))
+      value: (type_value
+        (type_variant
+          name: (type_identifier))
+        (type_variant
+          name: (type_identifier)
+          (type_identifier)))))
+  (declaration
+    (export_declaration
+      decl: (type_declaration
+        name: (type_identifier)
+        (type_parameters
+          (type_identifier))
+        value: (type_value
+          (type_variant
+            name: (type_identifier))
+          (type_variant
+            name: (type_identifier)
+            (type_identifier)
+            (effect_arrow_type
+              (unit_type)
+              return: (generic_type
+                constructor: (type_identifier)
+                (type_identifier))))))))
+  (declaration
+    (export_declaration
+      decl: (type_declaration
+        name: (type_identifier)
+        (type_parameters
+          (type_identifier)
+          (type_identifier))
+        value: (type_value
+          (type_constructor
+            constructor: (type_identifier)
+            (effect_arrow_type
+              (type_identifier)
+              return: (type_identifier)))))))
+  (declaration
+    (export_declaration
+      decl: (type_declaration
+        name: (type_identifier)
+        (type_parameters
+          (type_identifier)
+          (type_identifier))
+        value: (type_value
+          (type_constructor
+            constructor: (type_identifier)
+            (effect_arrow_type
+              (type_identifier)
+              return: (type_identifier))
+            (effect_arrow_type
+              (type_identifier)
+              return: (effect_arrow_type
+                (type_identifier)
+                return: (type_identifier))))))))
+  (declaration
+    (export_declaration
+      decl: (type_declaration
+        name: (type_identifier)
+        value: (type_value
+          (record_type
+            name: (identifier)
+            type: (type_identifier)
+            name: (identifier)
+            type: (type_identifier)
+            name: (identifier)
+            type: (type_identifier))))))
+  (declaration
+    (type_declaration
+      name: (type_identifier)
+      (type_parameters
+        (type_identifier))
+      value: (type_value
+        (record_type
+          name: (identifier)
+          type: (type_identifier)
+          extend: (type_identifier))))))
+
+==================
+receiver dot and attributes
+==================
+
+export unwrap_or_else<T> :: (opt: Option<T>). (f: Unit -> T) -> T {
+  match opt {
+  | Some(v) -> v
+  | None -> f(())
+  }
+}
+
+export tap<T> :: (opt: Option<T>). (@local f: T -> Unit) -> Option<T> {
+  f(0)
+  opt
+}
+
+---
+
+(source_file
+  (declaration
+    (export_declaration
+      decl: (function_declaration
+        name: (identifier)
+        type_params: (type_parameters
+          (type_identifier))
+        (parameter_list
+          name: (identifier)
+          type: (generic_type
+            constructor: (type_identifier)
+            (type_identifier)))
+        (parameter_list
+          name: (identifier)
+          type: (effect_arrow_type
+            (unit_type)
+            return: (type_identifier)))
+        return_type: (type_identifier)
+        body: (block
+          (match_expression
+            scrutinee: (identifier)
+            (match_arm
+              pattern: (pattern
+                (constructor_pattern
+                  constructor: (type_identifier)
+                  (pattern
+                    (identifier))))
+              body: (identifier))
+            (match_arm
+              pattern: (pattern
+                (type_identifier))
+              body: (call_expression
+                function: (identifier)
+                (argument_list
+                  (unit)))))))))
+  (declaration
+    (export_declaration
+      decl: (function_declaration
+        name: (identifier)
+        type_params: (type_parameters
+          (type_identifier))
+        (parameter_list
+          name: (identifier)
+          type: (generic_type
+            constructor: (type_identifier)
+            (type_identifier)))
+        (parameter_list
+          (attribute
+            (identifier))
+          name: (identifier)
+          type: (effect_arrow_type
+            (type_identifier)
+            return: (unit_type)))
+        return_type: (generic_type
+          constructor: (type_identifier)
+          (type_identifier))
+        body: (block
+          (call_expression
+            function: (call_expression
+              function: (identifier)
+              (argument_list
+                (integer)))
+            arg: (identifier)))))))
+
+==================
+ufcs chains and index access
+==================
+
+main :: (args: Array<String>) -> Unit {
+  let a = args.(0)
+  let n = Array.length args
+  let id = res.red.green_id
+  Int.to_string(count_green_comments(res.greens)) |> print_string
+}
+
+---
+
+(source_file
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        name: (identifier)
+        type: (generic_type
+          constructor: (type_identifier)
+          (type_identifier)))
+      return_type: (unit_type)
+      body: (block
+        (let_statement
+          name: (identifier)
+          value: (ufcs_expression
+            receiver: (identifier)
+            (argument_list
+              (integer))))
+        (let_statement
+          name: (identifier)
+          value: (call_expression
+            function: (ufcs_expression
+              receiver: (type_identifier)
+              method: (identifier))
+            arg: (identifier)))
+        (let_statement
+          name: (identifier)
+          value: (binary_expression
+            (ufcs_expression
+              receiver: (call_expression
+                function: (ufcs_expression
+                  receiver: (ufcs_expression
+                    receiver: (identifier)
+                    method: (identifier))
+                  method: (identifier))
+                arg: (type_identifier))
+              method: (identifier)
+              (argument_list
+                (call_expression
+                  function: (identifier)
+                  (argument_list
+                    (ufcs_expression
+                      receiver: (identifier)
+                      method: (identifier))))))
+            (identifier)))))))
+
+==================
+if-then-else expressions
+==================
+
+pick :: (rt: Bool) (src: Bool) -> String {
+  let lossless = if rt == src then "lossless" else "diverged"
+  if rt == src { 1 } else { 0 }
+}
+
+---
+
+(source_file
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        name: (identifier)
+        type: (type_identifier))
+      (parameter_list
+        name: (identifier)
+        type: (type_identifier))
+      return_type: (type_identifier)
+      body: (block
+        (let_statement
+          name: (identifier)
+          value: (if_expression
+            condition: (binary_expression
+              (identifier)
+              (identifier))
+            then: (string)
+            else: (string)))
+        (if_expression
+          condition: (binary_expression
+            (identifier)
+            (identifier))
+          then: (block
+            (integer))
+          else: (block
+            (integer)))))))
