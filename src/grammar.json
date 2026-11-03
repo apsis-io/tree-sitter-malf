@@ -965,14 +965,11 @@
           },
           {
             "type": "SYMBOL",
-            "name": "identifier"
+            "name": "import_uri"
           },
           {
-            "type": "TOKEN",
-            "content": {
-              "type": "PATTERN",
-              "value": "(go|wit):[^\\s{}]+"
-            }
+            "type": "SYMBOL",
+            "name": "identifier"
           },
           {
             "type": "SYMBOL",

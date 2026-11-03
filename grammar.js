@@ -189,8 +189,10 @@ module.exports = grammar({
         "=",
         field("target", $.extern_target)),
 
-    extern_target: ($) => prec(2, choice($.string, $.identifier,
-      token(/(go|wit):[^\s{}]+/), $.dotted_name)),
+    // Targets: quoted symbols, any-scheme URIs (`velocity:stdlib/x`),
+    // dotted symbols, or bare identifiers (`= or`).
+    extern_target: ($) => prec(2, choice($.string, $.import_uri, $.identifier,
+      $.dotted_name)),
 
     // Quoted dot-qualified extern names lex as opaque tokens so the `.` in
     // `"Code.run"` never parses as a UFCS receiver.

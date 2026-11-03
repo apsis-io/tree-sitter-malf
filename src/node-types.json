@@ -2495,7 +2495,7 @@
     "fields": {},
     "children": {
       "multiple": false,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "dotted_name",
@@ -2503,6 +2503,10 @@
         },
         {
           "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "import_uri",
           "named": true
         },
         {
