@@ -87,7 +87,8 @@ extern module STM = "go:stm" { commit :: (t: T) [] -> Bool = go:stm.Commit }
           type: (type_identifier))
         effects: (effect_row)
         return_type: (type_identifier)
-        target: (extern_target)))))
+        target: (extern_target
+          (import_uri))))))
 
 ==================
 import forms
