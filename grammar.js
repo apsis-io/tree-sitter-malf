@@ -59,6 +59,25 @@ module.exports = grammar({
     [$.function_declaration, $.block_type],
     [$.pattern, $.juxtaposed_pattern],
     [$.constructor_pattern],
+    // trailing commas: keep the comma-shift and the close-early paths alive
+    [$.record_type, $.record_literal],
+    [$.record_type],
+    [$.record_literal],
+    [$.gadt_variant, $.type_variable],
+    [$.type_parameters, $._type],
+    [$.effect_arrow_type],
+    // `let x = if c { 1 } else { 2 }` + next statement `[A(1)]` — keep the
+    // statement boundary alive against index-attachment (NL-significant law).
+    [$.index_expression, $.let_statement],
+    [$._expression, $.index_target],
+    [$.index_target, $._type],
+    [$.index_target, $.type_variable],
+    [$._expression, $.index_target, $._type],
+    [$._expression, $.index_target, $.type_variable],
+    [$.effect_row, $.list],
+    [$.index_target, $.pattern],
+    [$.index_target, $.pattern, $.constructor_pattern],
+    [$._expression, $.quote_expression],
     [$.ellipsis, $.list_pattern, $.pattern, $.juxtaposed_pattern],
     [$.ellipsis, $.list_pattern],
     [$.module_block_declaration, $._expression],
@@ -197,7 +216,8 @@ module.exports = grammar({
 
     skin_binding: ($) =>
       seq(choice("prefix", "infix", "infixl", "infixr", "infixc", "postfix"),
-        $.integer, $.string, "<=>", field("op", $.type_identifier)),
+        $.integer, choice($.string, seq("(", $.string, ")")), "<=>",
+        field("op", $.type_identifier)),
 
     skin_rule: ($) =>
       seq("rule", field("name", $.identifier), "(",
@@ -263,8 +283,12 @@ module.exports = grammar({
     world_declaration: ($) =>
       prec.right(20, seq("world", field("name", choice($.identifier, $.type_identifier)),
         optional(seq("=", field("target", $.extern_target))), "{",
-        repeat(seq(choice("import", "export"), field("name", $.identifier),
-          "=", field("target", $.extern_target))),
+        repeat(choice(
+          seq(choice("import", "export"), field("name", $.identifier),
+            "=", field("target", $.extern_target)),
+          // `export { member :: (x: T) [] -> R }` — signature member blocks
+          seq(choice("import", "export"), field("members", $.block)),
+        )),
         "}")),
 
     effect_declaration: ($) =>
@@ -300,6 +324,7 @@ module.exports = grammar({
           "<", ">", "<=", ">=", "&&", "||", "|>", "<=>", "<~", "~>", "<~>",
           "<|>", "??", "-.", "!", "~", "**", "*.", "/.", "+.", "-.", "++", "@", "<+>", "<->",
           "<*>", "<$>", "::", ":=", "<-", "<<", "<<=", "<==", "<>", "=>>", ">>", ">>=",
+          "<=<", ">=>", "|",
           ">>>", "|>>", "=")),
         // word operator sections: `(not)`, `(deref)`
         $.identifier,
@@ -360,8 +385,11 @@ module.exports = grammar({
 
     record_type: ($) =>
       seq("{",
-        repeat1(seq(optional(","), optional("mut"),
+        repeat(seq(optional("mut"),
+          field("name", $.identifier), ":", field("type", $._type), ",")),
+        optional(seq(optional("mut"),
           field("name", $.identifier), ":", field("type", $._type))),
+        optional(","),
         optional(seq("|", field("extend", $._type))),
         "}"),
 
@@ -384,7 +412,7 @@ module.exports = grammar({
       ),
 
     gadt_variant: ($) =>
-      seq(
+      prec(1, seq(
         "|",
         field("name", choice($.type_identifier, $.identifier)),
         optional($.type_parameters),
@@ -394,7 +422,7 @@ module.exports = grammar({
           seq("=", field("signature", $._gadt_signature)),
           $._gadt_signature,
         )),
-      ),
+      )),
 
     attribute: ($) =>
       prec.left(seq("@", choice($.identifier, $.type_identifier), optional($.argument_list))),
@@ -480,14 +508,14 @@ module.exports = grammar({
     import_uri: ($) => token(/[a-z][a-zA-Z0-9_]*(\.[a-z][a-zA-Z0-9_]*)*:[A-Za-z0-9_./#@-]+/),
 
     let_statement: ($) =>
-      seq(
+      prec.dynamic(1, seq(
         choice("let", "const"),
-        optional(field("mode", choice("local", "once"))),
+        optional(field("mode", choice("local", "once", "rec"))),
         field("name", choice($.identifier, $.pattern)),
         optional(seq(":", field("annotation", $._type))),
         "=",
         field("value", $._expression),
-      ),
+      )),
 
     ellipsis: ($) => "...",
 
@@ -498,6 +526,8 @@ module.exports = grammar({
         paramLists($),
         optional(field("effects", $.effect_row)),
         "->",
+        // `fn (x: T) -> Ret { body }` — annotated or bare
+        optional(field("return_type", $._type)),
         field("body", choice($._expression, $.block)),
       ),
 
@@ -566,12 +596,34 @@ module.exports = grammar({
           seq("(", field("effect", $.type_identifier), repeat($._expression), ")"),
         ))),
 
-    quote_expression: ($) => seq("<[", $._expression, "]>"),
+    // Skin template: `<[ let $(lhs) : $(ty) = $(rhs) ]>` — statement shapes
+    // with splices; the skeleton is template atoms, not parsed code.
+    quote_expression: ($) => seq("<[", repeat(choice($.splice_expression, $.quote_atom)), "]>"),
+
+    quote_atom: ($) => token(choice(
+      /[a-zA-Z_][a-zA-Z0-9_]*/,
+      /[+\-*/%<>=!&|:;,.?@^~]+/,
+      /[()\[\]{}]/,
+      /[0-9]+/,
+      /"[^"]*"/,
+    )),
     splice_expression: ($) => seq("$(", $._expression, ")"),
 
-    // Bracket indexing: `g.op[i]`, `args[i]`
+    // Bracket indexing: `g.op[i]`, `args[i]`, `x[i][j]` — receivers are
+    // value chains (never a bare if/block/list), so a following `[...]`
+    // statement can't be swallowed as an index.
     index_expression: ($) =>
-      prec(PREC.CALL, seq(field("receiver", $._expression), "[", $._expression, "]")),
+      prec(PREC.CALL, seq(field("receiver", $.index_target), "[", $._expression, "]")),
+
+    index_target: ($) => choice(
+      $.identifier,
+      $.type_identifier,
+      $.ufcs_expression,
+      $.call_expression,
+      $.index_expression,
+      $.deref_expression,
+      $.splice_expression,
+    ),
 
     // Application: `f(a, b)` calls, `f x y` / `op_tag OpNeg` / `EInt 0`
     // juxtaposition, and mixed `Ctor (x) y` forms.
@@ -646,7 +698,9 @@ module.exports = grammar({
 
     if_expression: ($) =>
       choice(
-        prec.right(seq(
+        // Above CALL so a trailing `[...]` statement attaches to the next
+        // statement, not as an index on the else block (`{ 2 } [A(1)]`).
+        prec.right(PREC.CALL + 1, seq(
           "if",
           field("condition", $._expression),
           field("then", $.block),
@@ -675,20 +729,27 @@ module.exports = grammar({
     handler_arm: ($) =>
       seq(
         "|",
-        "effect",
         choice(
+          // `| effect (Fetch key) k -> ...`
           seq(
-            field("effect", $.type_identifier),
-            optional(seq("(", field("arg", $.pattern), ")")),
+            "effect",
+            choice(
+              seq(
+                field("effect", $.type_identifier),
+                optional(seq("(", field("arg", $.pattern), ")")),
+              ),
+              seq(
+                "(",
+                field("effect", $.type_identifier),
+                optional(field("arg", $.pattern)),
+                ")",
+              ),
+            ),
+            field("continuation", $.identifier),
           ),
-          seq(
-            "(",
-            field("effect", $.type_identifier),
-            optional(field("arg", $.pattern)),
-            ")",
-          ),
+          // `| v -> v` — value catch arm
+          field("value", $.pattern),
         ),
-        field("continuation", $.identifier),
         "->",
         field("body", $._expression),
       ),
@@ -713,14 +774,22 @@ module.exports = grammar({
     // `{ op: node.op }`, `{ n = 0, ... }`, shorthand `{ file_id: }` —
     // field separators are commas or just whitespace.
     // `{ op: node.op }`, `{ n = 0 }`, functional update
-    // `{ table with node_types = ... }` — commas or whitespace between fields.
+    // `{ table with node_types = ... }` — fields are comma-separated.
     record_literal: ($) => seq("{",
       optional(seq(field("base", $._expression), "with")),
-      repeat1(seq(optional(","),
+      optional(","),
+      repeat(seq(
+        field("name", $.identifier),
+        choice(":", "="),
+        field("value", $._expression),
+        ",",
+      )),
+      optional(seq(
         field("name", $.identifier),
         choice(":", "="),
         field("value", $._expression),
       )),
+      optional(","),
       "}"),
 
     unary_expression: ($) =>
@@ -753,10 +822,14 @@ module.exports = grammar({
         $.constructor_pattern,
         $.poly_variant,
         $.tuple_pattern,
+        $.or_pattern,
       ),
 
     juxtaposed_pattern: ($) =>
       prec.right(seq(choice($.tuple_pattern, $.typed_pattern), $.pattern)),
+
+    // `| A | B -> x` — alternatives share the arm bar.
+    or_pattern: ($) => prec.right(seq(field("left", $.pattern), "|", field("right", $.pattern))),
 
     tuple_pattern: ($) => seq("(", commaSep($.pattern), ")"),
 
@@ -830,10 +903,11 @@ module.exports = grammar({
         seq(
           // Multi-group inputs: `(compute: (Int) (List<Int>) -> Int)`
           repeat(prec(-1, seq("(", commaSep($._type), ")"))),
-          $._type,
+          optional($._type),
           optional(field("effects", $.effect_row)),
           "->",
           field("return", $._type),
+          optional(field("return_effects", $.effect_row)),
         ),
       ),
 

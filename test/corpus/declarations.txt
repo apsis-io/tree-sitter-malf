@@ -406,3 +406,349 @@ pick :: (rt: Bool) (src: Bool) -> String {
             (integer))
           else: (block
             (integer)))))))
+
+================================================================================
+Or-patterns, rest patterns, handler catch arms
+================================================================================
+
+f :: (v: V) [] -> Int {
+  match v {
+  | A | B(_) -> 1
+  | StagedEffect(_, _, _) -> 2
+  | (X, _) | (_, X) -> 3
+  | [h, ... rest] -> 4
+  | _ -> 5
+  }
+  let res = try t() with {
+  | v -> v
+  | effect (Fetch key) k -> 0
+  }
+  res
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        name: (identifier)
+        type: (type_identifier))
+      effects: (effect_row)
+      return_type: (type_identifier)
+      body: (block
+        (match_expression
+          scrutinee: (identifier)
+          (match_arm
+            pattern: (pattern
+              (or_pattern
+                left: (pattern
+                  (type_identifier))
+                right: (pattern
+                  (constructor_pattern
+                    constructor: (type_identifier)
+                    (pattern
+                      (wildcard_pattern))))))
+            body: (integer))
+          (match_arm
+            pattern: (pattern
+              (constructor_pattern
+                constructor: (type_identifier)
+                (pattern
+                  (wildcard_pattern))
+                (pattern
+                  (wildcard_pattern))
+                (pattern
+                  (wildcard_pattern))))
+            body: (integer))
+          (match_arm
+            pattern: (pattern
+              (or_pattern
+                left: (pattern
+                  (tuple_pattern
+                    (pattern
+                      (type_identifier))
+                    (pattern
+                      (wildcard_pattern))))
+                right: (pattern
+                  (tuple_pattern
+                    (pattern
+                      (wildcard_pattern))
+                    (pattern
+                      (type_identifier))))))
+            body: (integer))
+          (match_arm
+            pattern: (pattern
+              (list_pattern
+                (pattern
+                  (identifier))
+                rest: (pattern
+                  (identifier))))
+            body: (integer))
+          (match_arm
+            pattern: (pattern
+              (wildcard_pattern))
+            body: (integer)))
+        (let_statement
+          name: (identifier)
+          value: (try_expression
+            body: (call_expression
+              function: (identifier)
+              arg: (unit))
+            (handler_arm
+              value: (pattern
+                (identifier))
+              body: (identifier))
+            (handler_arm
+              effect: (type_identifier)
+              arg: (pattern
+                (identifier))
+              continuation: (identifier)
+              body: (integer))))
+        (identifier)))))
+
+================================================================================
+Skin bindings, rules, and quote templates
+================================================================================
+
+skin c <=> Ast {
+  lexer {
+    layout: Newline,
+  }
+  prefix 10 ("-")     <=> UOpNeg
+  infixl 7 ("mod")    <=> OpMod
+  rule stmt(ty:ty lhs:ident "=" rhs:expr ";") <=> <[
+    let $(lhs) : $(ty) = $(rhs)
+  ]>
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (declaration
+    (skin_declaration
+      name: (identifier)
+      target: (type_identifier)
+      (skin_lexer
+        name: (identifier)
+        value: (type_identifier))
+      (skin_binding
+        (integer)
+        (string)
+        op: (type_identifier))
+      (skin_binding
+        (integer)
+        (string)
+        op: (type_identifier))
+      (skin_rule
+        name: (identifier)
+        (identifier)
+        item: (identifier)
+        (identifier)
+        item: (identifier)
+        (string)
+        (identifier)
+        item: (identifier)
+        (string)
+        template: (quote_expression
+          (quote_atom)
+          (splice_expression
+            (identifier))
+          (quote_atom)
+          (splice_expression
+            (identifier))
+          (quote_atom)
+          (splice_expression
+            (identifier)))))))
+
+================================================================================
+Trailing commas, world export blocks, fixity exports
+================================================================================
+
+export type T<K, V> = {
+  entries: List<(K, V)>,
+  hash_fn: (K) -> Int,
+}
+
+world Compiler = malformed:compiler {
+  export {
+    compiler_wit_package_uri :: () [] -> String
+  }
+}
+
+export infixr prec:flow (>=>) :: (f: A -> Option<B>) -> A -> Option<B> {
+  fn (x: B) -> g(f(x))
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (declaration
+    (export_declaration
+      decl: (type_declaration
+        name: (type_identifier)
+        (type_parameters
+          (type_identifier)
+          (type_identifier))
+        value: (type_value
+          (record_type
+            name: (identifier)
+            type: (generic_type
+              constructor: (type_identifier)
+              (tuple_type
+                (type_identifier)
+                (type_identifier)))
+            name: (identifier)
+            type: (effect_arrow_type
+              (tuple_type
+                (type_identifier))
+              return: (type_identifier)))))))
+  (declaration
+    (world_declaration
+      name: (type_identifier)
+      target: (extern_target
+        (import_uri))
+      members: (block
+        (function_declaration
+          name: (identifier)
+          (parameter_list
+            (unit))
+          effects: (effect_row)
+          return_type: (type_identifier)))))
+  (declaration
+    (infix_declaration
+      label: (identifier)
+      label_kind: (identifier)
+      op: (operator_name)
+      (parameter_list
+        name: (identifier)
+        type: (effect_arrow_type
+          (type_identifier)
+          return: (generic_type
+            constructor: (type_identifier)
+            (type_identifier))))
+      return_type: (effect_arrow_type
+        (type_identifier)
+        return: (generic_type
+          constructor: (type_identifier)
+          (type_identifier)))
+      body: (block
+        (anonymous_function
+          (parameter_list
+            name: (identifier)
+            type: (type_identifier))
+          body: (call_expression
+            function: (identifier)
+            (argument_list
+              (call_expression
+                function: (identifier)
+                (argument_list
+                  (identifier))))))))))
+
+================================================================================
+Recursive bindings, let-bound ifs, index receivers
+================================================================================
+
+f :: () [] -> Int {
+  let rec eval_list = fn (terms: List<T>) -> Option<List<Int>> {
+    match terms {
+    | [] -> Some([])
+    | (t: T) (rest: List<T>) -> eval_list(rest)
+    }
+  }
+  let sum = if c {
+    let x = if c2 { 1 } else { 2 }
+    [A(1), B(2)]
+  } else {
+    []
+  }
+  let first = eval_list([])[0]
+  sum
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        (unit))
+      effects: (effect_row)
+      return_type: (type_identifier)
+      body: (block
+        (let_statement
+          name: (identifier)
+          value: (anonymous_function
+            (parameter_list
+              name: (identifier)
+              type: (generic_type
+                constructor: (type_identifier)
+                (type_identifier)))
+            return_type: (generic_type
+              constructor: (type_identifier)
+              (generic_type
+                constructor: (type_identifier)
+                (type_identifier)))
+            body: (block
+              (match_expression
+                scrutinee: (identifier)
+                (match_arm
+                  pattern: (pattern
+                    (list_pattern))
+                  body: (call_expression
+                    function: (type_identifier)
+                    (argument_list
+                      (list))))
+                (match_arm
+                  pattern: (pattern
+                    (juxtaposed_pattern
+                      (typed_pattern
+                        pat: (pattern
+                          (identifier))
+                        type: (type_identifier))
+                      (pattern
+                        (typed_pattern
+                          pat: (pattern
+                            (identifier))
+                          type: (generic_type
+                            constructor: (type_identifier)
+                            (type_identifier))))))
+                  body: (call_expression
+                    function: (identifier)
+                    (argument_list
+                      (identifier))))))))
+        (let_statement
+          name: (identifier)
+          value: (if_expression
+            condition: (identifier)
+            then: (block
+              (let_statement
+                name: (identifier)
+                value: (if_expression
+                  condition: (identifier)
+                  then: (block
+                    (integer))
+                  else: (block
+                    (integer))))
+              (list
+                (call_expression
+                  function: (type_identifier)
+                  (argument_list
+                    (integer)))
+                (call_expression
+                  function: (type_identifier)
+                  (argument_list
+                    (integer)))))
+            else: (block
+              (list))))
+        (let_statement
+          name: (identifier)
+          value: (call_expression
+            function: (identifier)
+            (argument_list
+              (list))))
+        (list
+          (integer))
+        (identifier)))))
