@@ -57,6 +57,10 @@ module.exports = grammar({
     [$.module_block_declaration, $.function_declaration, $._expression, $.block_type],
     [$.function_declaration, $.block_type, $._expression],
     [$.function_declaration, $.block_type],
+    [$.pattern, $.juxtaposed_pattern],
+    [$.constructor_pattern],
+    [$.ellipsis, $.list_pattern, $.pattern, $.juxtaposed_pattern],
+    [$.ellipsis, $.list_pattern],
     [$.module_block_declaration, $._expression],
     [$._expression, $._statement],
     [$.pattern, $.constructor_pattern],
@@ -71,6 +75,8 @@ module.exports = grammar({
     [$.parenthesized_expression, $.argument_list],
     [$.for_statement, $.pattern],
     [$._expression, $.constructor_pattern],
+    [$.call_expression, $.constructor_pattern],
+    [$.argument_list, $.constructor_pattern],
     [$.extern_member, $.function_declaration],
   ],
 
@@ -138,7 +144,7 @@ module.exports = grammar({
       prec.right(seq(
         optional("export"),
         choice("prefix", "infix", "infixl", "infixr", "infixc", "postfix"),
-        optional(seq(field("label", $.identifier), ":", field("label_kind", choice($.identifier, $.operator_name)))),
+        optional(seq(field("label", $.identifier), ":", field("label_kind", choice($.identifier, $.operator_name, "prefix", "infix", "infixl", "infixr", "infixc", "postfix")))),
         optional(choice($.integer, $.prec_ref_group)),
         field("op", $.operator_name),
         optional(
@@ -511,7 +517,6 @@ module.exports = grammar({
         $.list,
         $.hole,
         $.perform_expression,
-        $.continue_expression,
         $.quote_expression,
         $.splice_expression,
         $.ufcs_expression,
@@ -561,10 +566,6 @@ module.exports = grammar({
           seq("(", field("effect", $.type_identifier), repeat($._expression), ")"),
         ))),
 
-    continue_expression: ($) =>
-      prec.right(PREC.CALL, seq("continue", field("continuation", $.identifier),
-        optional(choice($.argument_list, repeat1($._expression))))),
-
     quote_expression: ($) => seq("<[", $._expression, "]>"),
     splice_expression: ($) => seq("$(", $._expression, ")"),
 
@@ -576,7 +577,18 @@ module.exports = grammar({
     // juxtaposition, and mixed `Ctor (x) y` forms.
     call_expression: ($) =>
       prec.left(PREC.CALL, seq(
-        field("function", $._expression),
+        field("function", choice(
+          $.identifier,
+          $.type_identifier,
+          $.ufcs_expression,
+          $.call_expression,
+          $.parenthesized_expression,
+          $.index_expression,
+          $.anonymous_function,
+          $.splice_expression,
+          $.deref_expression,
+          $.poly_variant,
+        )),
         repeat1(choice(
           $.argument_list,
           field("arg", choice($.identifier, $.type_identifier, $.integer,
@@ -664,8 +676,18 @@ module.exports = grammar({
       seq(
         "|",
         "effect",
-        field("effect", $.type_identifier),
-        optional(seq("(", field("arg", $.pattern), ")")),
+        choice(
+          seq(
+            field("effect", $.type_identifier),
+            optional(seq("(", field("arg", $.pattern), ")")),
+          ),
+          seq(
+            "(",
+            field("effect", $.type_identifier),
+            optional(field("arg", $.pattern)),
+            ")",
+          ),
+        ),
         field("continuation", $.identifier),
         "->",
         field("body", $._expression),
@@ -721,20 +743,30 @@ module.exports = grammar({
         $.integer,
         $.string,
         $.unit,
+        $.ellipsis,
         $.identifier,
         $.type_identifier,
         $.list_pattern,
         $.cons_pattern,
+        $.juxtaposed_pattern,
         $.typed_pattern,
         $.constructor_pattern,
         $.poly_variant,
         $.tuple_pattern,
       ),
 
+    juxtaposed_pattern: ($) =>
+      prec.right(seq(choice($.tuple_pattern, $.typed_pattern), $.pattern)),
+
     tuple_pattern: ($) => seq("(", commaSep($.pattern), ")"),
 
     wildcard_pattern: ($) => "_",
-    list_pattern: ($) => seq("[", commaSep($.pattern), "]"),
+    // `[a, b]`, `[h, ... rest]` — the rest element spreads the tail.
+    list_pattern: ($) => seq("[",
+      optional(commaSep($.pattern)),
+      optional(seq(",", "...", field("rest", $.pattern))),
+      optional($.pattern),
+      "]"),
     cons_pattern: ($) => prec.right(PREC.CONS, seq(field("head", $.pattern), "::", field("tail", $.pattern))),
     typed_pattern: ($) =>
       prec(PREC.UNARY, seq("(", field("pat", $.pattern), ":", field("type", $._type), ")")),
@@ -788,7 +820,7 @@ module.exports = grammar({
 
     unit_type: ($) => "Unit",
 
-    tuple_type: ($) => choice($.unit, prec(-1, seq("(", commaSep($._type), ")"))),
+    tuple_type: ($) => choice($.unit, prec(0, seq("(", commaSep($._type), ")"))),
 
     list_type: ($) => prec(PREC.CALL, seq(field("elem", $._type), "list")),
 
@@ -796,6 +828,8 @@ module.exports = grammar({
       prec.right(
         PREC.ASSIGN,
         seq(
+          // Multi-group inputs: `(compute: (Int) (List<Int>) -> Int)`
+          repeat(prec(-1, seq("(", commaSep($._type), ")"))),
           $._type,
           optional(field("effects", $.effect_row)),
           "->",

@@ -124,8 +124,8 @@ type declarations
 ==================
 
 type Option<A> =
-  | None
   | Some(A)
+  | None
 
 export type Seq<T> =
   | SeqEmpty
@@ -152,10 +152,10 @@ type Rec<T> = { val: T | R }
         (type_identifier))
       value: (type_value
         (type_variant
-          name: (type_identifier))
-        (type_variant
           name: (type_identifier)
-          (type_identifier)))))
+          (type_identifier))
+        (type_variant
+          name: (type_identifier)))))
   (declaration
     (export_declaration
       decl: (type_declaration
