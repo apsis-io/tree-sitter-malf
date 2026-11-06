@@ -4328,6 +4328,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "dynamic_binary_expression"
+        },
+        {
+          "type": "SYMBOL",
           "name": "block"
         },
         {
@@ -4900,74 +4904,6 @@
                   {
                     "type": "STRING",
                     "value": "<=>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": ">=>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "<=<"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": ">>="
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "<<="
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "<=="
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "==>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "->>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "|>>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "=>>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": ">>>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "<+>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "<->"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "<*>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "<$>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "<~>"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "??"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": "++"
                   }
                 ]
               },
@@ -5169,6 +5105,50 @@
           }
         }
       ]
+    },
+    "dynamic_binary_expression": {
+      "type": "PREC_DYNAMIC",
+      "value": -1,
+      "content": {
+        "type": "PREC_LEFT",
+        "value": 3,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "left",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_expression"
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "op",
+              "content": {
+                "type": "SYMBOL",
+                "name": "dynamic_operator"
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "right",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_expression"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "dynamic_operator": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PATTERN",
+        "value": "[+\\-*\\/%<>=!&|~^?@.]+"
+      }
     },
     "assignment": {
       "type": "PREC_RIGHT",

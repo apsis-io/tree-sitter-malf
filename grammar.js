@@ -564,6 +564,7 @@ module.exports = grammar({
         $.match_expression,
         $.if_expression,
         $.try_expression,
+        $.dynamic_binary_expression,
         $.block,
         $.arrow_block,
         $.question_postfix,
@@ -663,10 +664,7 @@ module.exports = grammar({
 
     binary_expression: ($) =>
       choice(
-        prec.left(PREC.PIPE, seq($._expression, choice("|>", "<~", "~>", "<=>",
-          // dynamically declared operators (fixity declarations): flow/chaining
-          ">=>", "<=<", ">>=", "<<=", "<==", "==>", "->>", "|>>", "=>>", ">>>",
-          "<+>", "<->", "<*>", "<$>", "<~>", "??", "++"), $._expression)),
+        prec.left(PREC.PIPE, seq($._expression, choice("|>", "<~", "~>", "<=>"), $._expression)),
         prec.left(PREC.OR, seq($._expression, "||", $._expression)),
         prec.left(PREC.SHIFT, seq($._expression, choice("<<", ">>"), $._expression)),
         prec.left(PREC.AND, seq($._expression, "&&", $._expression)),
@@ -674,6 +672,20 @@ module.exports = grammar({
         prec.left(PREC.ADD, seq($._expression, choice("+", "-", "^"), $._expression)),
         prec.left(PREC.MUL, seq($._expression, choice("*", "/", "%", "**"), $._expression)),
       ),
+
+    // Dynamically declared operators (prefix/infixl/infixr prec declarations):
+    // any symbolic run parses as a binary operator. The token sits below every
+    // static token lexically and the rule below every static rule by parse
+    // precedence, so `+`, `<`, `::`, `//` comments etc. keep their meanings;
+    // anything else declared via fixity resolves here.
+    dynamic_binary_expression: ($) =>
+      prec.dynamic(-1, prec.left(PREC.ASSIGN, seq(
+        field("left", $._expression),
+        field("op", $.dynamic_operator),
+        field("right", $._expression),
+      ))),
+
+    dynamic_operator: ($) => token(/[+\-*\/%<>=!&|~^?@.]+/),
 
     assignment: ($) =>
       prec.right(
