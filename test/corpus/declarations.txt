@@ -832,3 +832,119 @@ rule :: (e: SpineTable) [] -> R {
                 name: (identifier)
                 type: (type_identifier))
               body: (identifier))))))))
+
+================================================================================
+Dynamically declared operators
+================================================================================
+
+compose :: (f: A -> Obs<B>) (g: B -> Obs<C>) [] -> (A -> Obs<C>) {
+  fn (x: A) -> (f >=> g) x
+}
+bind :: (o: Obs<A>) (f: A -> Obs<B>) [] -> Obs<B> {
+  o >>= f
+}
+cat :: (xs: List<T>) (ys: List<T>) [] -> List<T> {
+  xs ++ ys
+}
+pow :: (b: Int) [] -> Int {
+  b ** 2 * h |>> t
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        name: (identifier)
+        type: (effect_arrow_type
+          (type_identifier)
+          return: (generic_type
+            constructor: (type_identifier)
+            (type_identifier))))
+      (parameter_list
+        name: (identifier)
+        type: (effect_arrow_type
+          (type_identifier)
+          return: (generic_type
+            constructor: (type_identifier)
+            (type_identifier))))
+      effects: (effect_row)
+      return_type: (tuple_type
+        (effect_arrow_type
+          (type_identifier)
+          return: (generic_type
+            constructor: (type_identifier)
+            (type_identifier))))
+      body: (block
+        (anonymous_function
+          (parameter_list
+            name: (identifier)
+            type: (type_identifier))
+          body: (call_expression
+            function: (parenthesized_expression
+              (binary_expression
+                (identifier)
+                (identifier)))
+            arg: (identifier))))))
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        name: (identifier)
+        type: (generic_type
+          constructor: (type_identifier)
+          (type_identifier)))
+      (parameter_list
+        name: (identifier)
+        type: (effect_arrow_type
+          (type_identifier)
+          return: (generic_type
+            constructor: (type_identifier)
+            (type_identifier))))
+      effects: (effect_row)
+      return_type: (generic_type
+        constructor: (type_identifier)
+        (type_identifier))
+      body: (block
+        (binary_expression
+          (identifier)
+          (identifier)))))
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        name: (identifier)
+        type: (generic_type
+          constructor: (type_identifier)
+          (type_identifier)))
+      (parameter_list
+        name: (identifier)
+        type: (generic_type
+          constructor: (type_identifier)
+          (type_identifier)))
+      effects: (effect_row)
+      return_type: (generic_type
+        constructor: (type_identifier)
+        (type_identifier))
+      body: (block
+        (binary_expression
+          (identifier)
+          (identifier)))))
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        name: (identifier)
+        type: (type_identifier))
+      effects: (effect_row)
+      return_type: (type_identifier)
+      body: (block
+        (binary_expression
+          (binary_expression
+            (binary_expression
+              (identifier)
+              (integer))
+            (identifier))
+          (identifier))))))
