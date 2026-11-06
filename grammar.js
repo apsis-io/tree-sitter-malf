@@ -546,7 +546,6 @@ module.exports = grammar({
         $.unit,
         $.list,
         $.hole,
-        $.perform_expression,
         $.quote_expression,
         $.splice_expression,
         $.ufcs_expression,
@@ -588,13 +587,6 @@ module.exports = grammar({
     escape_sequence: ($) => /\\[nrt\\"']/,
 
     list: ($) => seq("[", commaSep($._expression), "]"),
-
-    perform_expression: ($) =>
-      prec.right(PREC.CALL, seq("perform",
-        choice(
-          seq(field("effect", $.type_identifier), optional($.argument_list)),
-          seq("(", field("effect", $.type_identifier), repeat($._expression), ")"),
-        ))),
 
     // Skin template: `<[ let $(lhs) : $(ty) = $(rhs) ]>` — statement shapes
     // with splices; the skeleton is template atoms, not parsed code.
