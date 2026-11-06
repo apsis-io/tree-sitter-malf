@@ -201,10 +201,11 @@ module.exports = grammar({
       seq("export", "*", optional(seq("as", field("alias", $.type_identifier))),
         "from", field("path", choice($.string, $.import_uri, $.identifier))),
 
-    // `export { spine_eq, spine_expr_eq } from std:omni/spine` — re-export lists
+    // `export { spine_eq, spine_expr_eq } from std:omni/spine` — re-export lists;
+    // bare `export { VelocityOp, OpAddInt, … }` re-exports imported names
     export_list_declaration: ($) =>
       seq("export", "{", commaSep(field("item", choice($.identifier, $.type_identifier))), "}",
-        "from", field("path", choice($.import_uri, $.string, $.identifier))),
+        optional(seq("from", field("path", choice($.import_uri, $.string, $.identifier))))),
 
     // `export skin go <=> Ast { ... }` — lexer config, precedence bindings,
     // and HCLP rule declarations with quote templates.
