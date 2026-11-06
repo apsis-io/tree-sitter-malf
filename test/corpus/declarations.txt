@@ -752,3 +752,83 @@ f :: () [] -> Int {
         (list
           (integer))
         (identifier)))))
+
+================================================================================
+Shifts, rewrite pairs, export-from lists
+================================================================================
+
+import {
+  and_if_proj, or_if_proj
+} from std:omni/egglog
+export {
+  spine_eq, spine_expr_eq
+} from std:omni/spine
+f :: (va: Int) (vb: Int) [] -> Int {
+  if vb >= 0 && vb < 62 { eg_add_int(va << vb) } else { va >> 2 }
+}
+rule :: (e: SpineTable) [] -> R {
+  (a) <=> (fn (x: SpineTable) -> x)
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (declaration
+    (import_declaration
+      item: (identifier)
+      item: (identifier)
+      path: (import_uri)))
+  (declaration
+    (export_list_declaration
+      item: (identifier)
+      item: (identifier)
+      path: (import_uri)))
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        name: (identifier)
+        type: (type_identifier))
+      (parameter_list
+        name: (identifier)
+        type: (type_identifier))
+      effects: (effect_row)
+      return_type: (type_identifier)
+      body: (block
+        (if_expression
+          condition: (binary_expression
+            (binary_expression
+              (identifier)
+              (integer))
+            (binary_expression
+              (identifier)
+              (integer)))
+          then: (block
+            (call_expression
+              function: (identifier)
+              (argument_list
+                (binary_expression
+                  (identifier)
+                  (identifier)))))
+          else: (block
+            (binary_expression
+              (identifier)
+              (integer)))))))
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        name: (identifier)
+        type: (type_identifier))
+      effects: (effect_row)
+      return_type: (type_identifier)
+      body: (block
+        (binary_expression
+          (parenthesized_expression
+            (identifier))
+          (parenthesized_expression
+            (anonymous_function
+              (parameter_list
+                name: (identifier)
+                type: (type_identifier))
+              body: (identifier))))))))

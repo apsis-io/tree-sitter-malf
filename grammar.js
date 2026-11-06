@@ -128,6 +128,7 @@ module.exports = grammar({
         $.export_declaration,
         $.export_default_declaration,
         $.export_star_declaration,
+        $.export_list_declaration,
         $.skin_declaration,
         $.infix_declaration,
         $.module_block_declaration,
@@ -199,6 +200,11 @@ module.exports = grammar({
     export_star_declaration: ($) =>
       seq("export", "*", optional(seq("as", field("alias", $.type_identifier))),
         "from", field("path", choice($.string, $.import_uri, $.identifier))),
+
+    // `export { spine_eq, spine_expr_eq } from std:omni/spine` — re-export lists
+    export_list_declaration: ($) =>
+      seq("export", "{", commaSep(field("item", choice($.identifier, $.type_identifier))), "}",
+        "from", field("path", choice($.import_uri, $.string, $.identifier))),
 
     // `export skin go <=> Ast { ... }` — lexer config, precedence bindings,
     // and HCLP rule declarations with quote templates.
@@ -657,8 +663,9 @@ module.exports = grammar({
 
     binary_expression: ($) =>
       choice(
-        prec.left(PREC.PIPE, seq($._expression, choice("|>", "<~", "~>"), $._expression)),
+        prec.left(PREC.PIPE, seq($._expression, choice("|>", "<~", "~>", "<=>"), $._expression)),
         prec.left(PREC.OR, seq($._expression, "||", $._expression)),
+        prec.left(PREC.SHIFT, seq($._expression, choice("<<", ">>"), $._expression)),
         prec.left(PREC.AND, seq($._expression, "&&", $._expression)),
         prec.left(PREC.COMPARE, seq($._expression, choice("==", "!=", "<", ">", "<=", ">="), $._expression)),
         prec.left(PREC.ADD, seq($._expression, choice("+", "-", "^"), $._expression)),
