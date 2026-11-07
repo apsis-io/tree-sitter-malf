@@ -549,6 +549,7 @@ module.exports = grammar({
         $.integer,
         $.float,
         $.string,
+        $.raw_string,
         $.boolean,
         $.unit,
         $.list,
@@ -590,6 +591,10 @@ module.exports = grammar({
         repeat(choice($.escape_sequence, $._string_content)),
         '"',
       ),
+
+    // Backtick raw strings (string-literal-mode epoch 2+): escape-free,
+    // may span lines; longest-match keeps `Tag` constructors working.
+    raw_string: ($) => token(seq("`", /[^`]*/, "`")),
     // Lexical precedence above the `//` comment extra: `"//"` stays a string.
     _string_content: ($) => token(prec(PREC.STRING, /[^\n"\\]+/)),
     escape_sequence: ($) => /\\[nrt\\"']/,
@@ -826,6 +831,7 @@ module.exports = grammar({
         $.boolean,
         $.integer,
         $.string,
+        $.raw_string,
         $.unit,
         $.ellipsis,
         $.identifier,

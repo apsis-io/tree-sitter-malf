@@ -100,6 +100,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -310,6 +314,10 @@
           "named": true
         },
         {
+          "type": "raw_string",
+          "named": true
+        },
+        {
           "type": "record_literal",
           "named": true
         },
@@ -446,6 +454,10 @@
         },
         {
           "type": "quote_expression",
+          "named": true
+        },
+        {
+          "type": "raw_string",
           "named": true
         },
         {
@@ -595,6 +607,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -758,6 +774,10 @@
         },
         {
           "type": "quote_expression",
+          "named": true
+        },
+        {
+          "type": "raw_string",
           "named": true
         },
         {
@@ -933,6 +953,10 @@
         },
         {
           "type": "quote_expression",
+          "named": true
+        },
+        {
+          "type": "raw_string",
           "named": true
         },
         {
@@ -1276,6 +1300,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -1407,6 +1435,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -1742,6 +1774,10 @@
           "named": true
         },
         {
+          "type": "raw_string",
+          "named": true
+        },
+        {
           "type": "record_literal",
           "named": true
         },
@@ -1900,6 +1936,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -2041,6 +2081,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -2915,6 +2959,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -3046,6 +3094,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -3207,6 +3259,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -3338,6 +3394,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -3506,6 +3566,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -4027,6 +4091,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -4202,6 +4270,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -4336,6 +4408,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -4467,6 +4543,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -4685,6 +4765,10 @@
           "named": true
         },
         {
+          "type": "raw_string",
+          "named": true
+        },
+        {
           "type": "record_literal",
           "named": true
         },
@@ -4874,6 +4958,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -5412,6 +5500,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -5549,6 +5641,10 @@
         },
         {
           "type": "quote_expression",
+          "named": true
+        },
+        {
+          "type": "raw_string",
           "named": true
         },
         {
@@ -5828,6 +5924,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -5959,6 +6059,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -6109,6 +6213,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -6364,6 +6472,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -6682,6 +6794,10 @@
           "named": true
         },
         {
+          "type": "raw_string",
+          "named": true
+        },
+        {
           "type": "record_literal",
           "named": true
         },
@@ -6766,6 +6882,10 @@
         },
         {
           "type": "poly_variant",
+          "named": true
+        },
+        {
+          "type": "raw_string",
           "named": true
         },
         {
@@ -6938,6 +7058,10 @@
           "named": true
         },
         {
+          "type": "raw_string",
+          "named": true
+        },
+        {
           "type": "record_literal",
           "named": true
         },
@@ -7096,6 +7220,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -7237,6 +7365,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -7555,6 +7687,10 @@
           "named": true
         },
         {
+          "type": "raw_string",
+          "named": true
+        },
+        {
           "type": "record_literal",
           "named": true
         },
@@ -7713,6 +7849,10 @@
           },
           {
             "type": "quote_expression",
+            "named": true
+          },
+          {
+            "type": "raw_string",
             "named": true
           },
           {
@@ -7933,6 +8073,10 @@
           "named": true
         },
         {
+          "type": "raw_string",
+          "named": true
+        },
+        {
           "type": "record_literal",
           "named": true
         },
@@ -8069,6 +8213,10 @@
         },
         {
           "type": "quote_expression",
+          "named": true
+        },
+        {
+          "type": "raw_string",
           "named": true
         },
         {
@@ -8226,6 +8374,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -8373,6 +8525,10 @@
         },
         {
           "type": "quote_expression",
+          "named": true
+        },
+        {
+          "type": "raw_string",
           "named": true
         },
         {
@@ -9046,6 +9202,10 @@
             "named": true
           },
           {
+            "type": "raw_string",
+            "named": true
+          },
+          {
             "type": "record_literal",
             "named": true
           },
@@ -9193,6 +9353,10 @@
         },
         {
           "type": "quote_expression",
+          "named": true
+        },
+        {
+          "type": "raw_string",
           "named": true
         },
         {
@@ -9649,6 +9813,10 @@
   },
   {
     "type": "quote_atom",
+    "named": true
+  },
+  {
+    "type": "raw_string",
     "named": true
   },
   {

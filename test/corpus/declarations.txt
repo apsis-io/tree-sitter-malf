@@ -952,3 +952,39 @@ pow :: (b: Int) [] -> Int {
             (identifier))
           op: (dynamic_operator)
           right: (identifier))))))
+
+================================================================================
+Backtick raw strings and constructor tags
+================================================================================
+
+f :: () [] -> String {
+  let a = `raw text with
+newlines and "quotes"`
+  let b = `ok
+  `Some(1)
+  b
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (declaration
+    (function_declaration
+      name: (identifier)
+      (parameter_list
+        (unit))
+      effects: (effect_row)
+      return_type: (type_identifier)
+      body: (block
+        (let_statement
+          name: (identifier)
+          value: (raw_string))
+        (let_statement
+          name: (identifier)
+          value: (raw_string))
+        (call_expression
+          function: (call_expression
+            function: (type_identifier)
+            (argument_list
+              (integer)))
+          arg: (identifier))))))
