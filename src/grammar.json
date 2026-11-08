@@ -2225,7 +2225,7 @@
                     "type": "TOKEN",
                     "content": {
                       "type": "PATTERN",
-                      "value": "[a-zA-Z_][a-zA-Z0-9_]*[+*!?]+"
+                      "value": "let[*+!?&|$%^~]"
                     }
                   }
                 ]
@@ -3488,93 +3488,6 @@
           ]
         },
         {
-          "type": "PREC",
-          "value": 1,
-          "content": {
-            "type": "SEQ",
-            "members": [
-              {
-                "type": "STRING",
-                "value": "for"
-              },
-              {
-                "type": "FIELD",
-                "name": "init",
-                "content": {
-                  "type": "CHOICE",
-                  "members": [
-                    {
-                      "type": "SYMBOL",
-                      "name": "let_statement"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "assignment"
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "STRING",
-                "value": ";"
-              },
-              {
-                "type": "FIELD",
-                "name": "condition",
-                "content": {
-                  "type": "CHOICE",
-                  "members": [
-                    {
-                      "type": "SYMBOL",
-                      "name": "_expression"
-                    },
-                    {
-                      "type": "BLANK"
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "STRING",
-                "value": ";"
-              },
-              {
-                "type": "FIELD",
-                "name": "post",
-                "content": {
-                  "type": "CHOICE",
-                  "members": [
-                    {
-                      "type": "CHOICE",
-                      "members": [
-                        {
-                          "type": "SYMBOL",
-                          "name": "assignment"
-                        },
-                        {
-                          "type": "SYMBOL",
-                          "name": "_expression"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "BLANK"
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "FIELD",
-                "name": "body",
-                "content": {
-                  "type": "SYMBOL",
-                  "name": "block"
-                }
-              }
-            ]
-          }
-        },
-        {
           "type": "SEQ",
           "members": [
             {
@@ -4593,8 +4506,11 @@
                 "value": "let"
               },
               {
-                "type": "STRING",
-                "value": "let*"
+                "type": "TOKEN",
+                "content": {
+                  "type": "PATTERN",
+                  "value": "let[*+!?&|$%^~]"
+                }
               },
               {
                 "type": "STRING",
@@ -4640,6 +4556,10 @@
                 {
                   "type": "SYMBOL",
                   "name": "identifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "operator_name"
                 },
                 {
                   "type": "SYMBOL",
@@ -7578,6 +7498,10 @@
     }
   ],
   "conflicts": [
+    [
+      "operator_name",
+      "pattern"
+    ],
     [
       "match_arm",
       "handler_arm"

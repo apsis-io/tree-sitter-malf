@@ -27,6 +27,7 @@ module.exports = grammar({
   word: ($) => $.identifier,
 
   conflicts: ($) => [
+    [$.operator_name, $.pattern],
     [$.match_arm, $.handler_arm],
     [$.operator_name, $._expression, $.type_variable],
     [$._expression, $.pattern],
@@ -339,10 +340,8 @@ module.exports = grammar({
           "<*>", "<$>", "::", ":=", "<-", "<<", "<<=", "<==", "<>", "=>>", ">>", ">>=",
           "<=<", ">=>", "|",
           ">>>", "|>>", "=",
-          // word operator with trailing sigils: `(let*)` and friends.
-          // Only [+*!?] — a wider set gloms onto generic types (`Conn<`)
-          // wherever a parenthesized form is speculatively valid.
-          token(/[a-zA-Z_][a-zA-Z0-9_]*[+*!?]+/))),
+          // Single-sigil let operator: `(let*)`, `(let+)`, `(let!)`, `(let?)`, etc.
+          token(/let[*+!?&|$%^~]/))),
         // word operator sections: `(not)`, `(deref)`
         $.identifier,
       ), ")"),
@@ -356,8 +355,6 @@ module.exports = grammar({
           "(",
           commaSep(
             choice(
-              // UMC juxtaposition: bare names share the trailing annotation
-              // (`(x bonus: Int)`)
               seq(optional($.attribute), optional("local"), field("name", choice($.identifier, $.type_identifier)), ":", field("type", $._type)),
               field("type", $._type),
             ),
@@ -466,17 +463,8 @@ module.exports = grammar({
 
     for_statement: ($) =>
       choice(
-        // Go-style: `for { ... }`, `for cond { ... }`, `for init; cond; post { ... }`
+        // `for { ... }`, `for cond { ... }`
         seq("for", field("body", $.block)),
-        prec(1, seq(
-          "for",
-          field("init", choice($.let_statement, $.assignment)),
-          ";",
-          field("condition", optional($._expression)),
-          ";",
-          field("post", optional(choice($.assignment, $._expression))),
-          field("body", $.block),
-        )),
         seq("for", field("condition", $._expression), field("body", $.block)),
         // Range / collection: `for i in 0..n`, `for i, (a, b) in xs`
         seq(
@@ -582,9 +570,9 @@ module.exports = grammar({
 
     let_statement: ($) =>
       prec.dynamic(1, seq(
-        choice("let", "let*", "const"),
+        choice("let", token(/let[*+!?&|$%^~]/), "const"),
         optional(field("mode", choice("local", "once", "rec"))),
-        field("name", choice($.identifier, $.pattern)),
+        field("name", choice($.identifier, $.operator_name, $.pattern)),
         optional(seq(":", field("annotation", $._type))),
         "=",
         field("value", $._expression),
