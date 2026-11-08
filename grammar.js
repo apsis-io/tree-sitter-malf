@@ -27,6 +27,8 @@ module.exports = grammar({
   word: ($) => $.identifier,
 
   conflicts: ($) => [
+    [$.match_arm, $.handler_arm],
+    [$.operator_name, $._expression, $.type_variable],
     [$._expression, $.pattern],
     [$.dotted_name, $._expression],
     [$.module_block_declaration, $.block_type, $._expression],
@@ -51,6 +53,7 @@ module.exports = grammar({
     [$.cons_expression, $.effect_declaration],
     [$.cons_expression, $.infix_declaration],
     [$.operator_name, $._expression],
+    [$.operator_name, $._expression, $.pattern],
     [$._expression, $.pattern, $.constructor_pattern],
     [$.function_declaration, $._expression],
     [$.module_block_declaration, $.function_declaration, $._expression],
@@ -102,7 +105,7 @@ module.exports = grammar({
   extras: ($) => [/\s/, $.comment_line],
 
   rules: {
-    source_file: ($) => repeat(seq($._item, optional(";"))),
+    source_file: ($) => repeat($._item),
 
     _item: ($) => choice($.declaration, $._expression, $._statement, $.attribute),
 
@@ -125,6 +128,7 @@ module.exports = grammar({
         $.extern_module_declaration,
         $.extend_type_declaration,
         $.world_declaration,
+        $.wit_block_declaration,
         $.export_declaration,
         $.export_default_declaration,
         $.export_star_declaration,
@@ -288,13 +292,15 @@ module.exports = grammar({
         repeat(choice($.function_declaration, $.extern_member)), "}"),
 
     world_declaration: ($) =>
-      prec.right(20, seq("world", field("name", choice($.identifier, $.type_identifier)),
+      prec.right(20, seq("world", field("name", choice($.identifier, $.type_identifier, $.wit_word)),
         optional(seq("=", field("target", $.extern_target))), "{",
         repeat(choice(
           seq(choice("import", "export"), field("name", $.identifier),
             "=", field("target", $.extern_target)),
           // `export { member :: (x: T) [] -> R }` — signature member blocks
           seq(choice("import", "export"), field("members", $.block)),
+          // WIT signature members: `export process-file: func(in: s32) -> s64`
+          $.wit_interface_member,
         )),
         "}")),
 
@@ -319,7 +325,7 @@ module.exports = grammar({
     // `where { T !: (_ -> _) }` — type-constraint block between the
     // signature and the body.
     constraint_block: ($) =>
-      seq("{", repeat(seq($.type_constraint, optional(";"))), "}"),
+      seq("{", repeat($.type_constraint), "}"),
 
     type_constraint: ($) =>
       seq(field("subject", choice($.type_identifier, $.identifier)),
@@ -332,7 +338,11 @@ module.exports = grammar({
           "<|>", "??", "-.", "!", "~", "**", "*.", "/.", "+.", "-.", "++", "@", "<+>", "<->",
           "<*>", "<$>", "::", ":=", "<-", "<<", "<<=", "<==", "<>", "=>>", ">>", ">>=",
           "<=<", ">=>", "|",
-          ">>>", "|>>", "=")),
+          ">>>", "|>>", "=",
+          // word operator with trailing sigils: `(let*)` and friends.
+          // Only [+*!?] — a wider set gloms onto generic types (`Conn<`)
+          // wherever a parenthesized form is speculatively valid.
+          token(/[a-zA-Z_][a-zA-Z0-9_]*[+*!?]+/))),
         // word operator sections: `(not)`, `(deref)`
         $.identifier,
       ), ")"),
@@ -346,6 +356,8 @@ module.exports = grammar({
           "(",
           commaSep(
             choice(
+              // UMC juxtaposition: bare names share the trailing annotation
+              // (`(x bonus: Int)`)
               seq(optional($.attribute), optional("local"), field("name", choice($.identifier, $.type_identifier)), ":", field("type", $._type)),
               field("type", $._type),
             ),
@@ -363,6 +375,8 @@ module.exports = grammar({
           $.hole,
           // rest rows: `[..E]`
           seq("..", choice($.identifier, $.type_identifier)),
+          // local capability bindings: `[local dr: Observe]`
+          seq("local", field("name", $.identifier), ":", field("type", choice($.type_identifier, $.identifier))),
         )),
         optional(seq("|", choice($.type_identifier, $.identifier, $.hole))),
         "]",
@@ -377,14 +391,21 @@ module.exports = grammar({
       ),
 
     // RHS of a type binding: a plain type (incl. records), a constructor
-    // application (`FwdProj(A -> B)`), or a bar-list of variants
-    // (`= | None | Some(A)`).
+    // application (`FwdProj(A -> B)`), a bar-list of variants
+    // (`= | None | Some(A)`), or the bare-first form
+    // (`= Leaf | Node(Tree, Int, Tree)`).
     type_value: ($) =>
       choice(
         $._type,
         $.type_constructor,
         repeat1($.type_variant),
+        prec(1, seq($._variant_body, repeat1($.type_variant))),
       ),
+
+    _variant_body: ($) =>
+      seq(field("name", $.type_identifier),
+        optional(seq("(", commaSep($._type), ")")),
+        optional(seq(choice("::", ":"), field("signature", $._type)))),
 
     type_constructor: ($) =>
       prec(PREC.CALL, seq(field("constructor", $.type_identifier),
@@ -402,10 +423,12 @@ module.exports = grammar({
 
     type_variant: ($) =>
       prec.right(seq("|", field("name", $.type_identifier),
-        optional(choice(
-          seq("(", commaSep($._type), ")"),
-          seq(choice("::", ":"), field("signature", $._type)),
-        )))),
+        // constructor args, then an optional `::` full signature or a bare
+        // `: Index` GADT index annotation — both may appear together
+        // (`| Conn(Int) : Conn<S>`)
+        optional(seq("(", commaSep($._type), ")")),
+        optional(seq(choice("::", ":"), field("signature", $._type))),
+      )),
 
     gadt_type_declaration: ($) =>
       seq(
@@ -427,6 +450,7 @@ module.exports = grammar({
         optional(choice(
           seq("::", field("signature", $._gadt_signature)),
           seq("=", field("signature", $._gadt_signature)),
+          seq(":", field("index", $._type)),
           $._gadt_signature,
         )),
       )),
@@ -476,7 +500,49 @@ module.exports = grammar({
     question_postfix: ($) => prec(PREC.UNARY, seq($._expression, "?")),
 
     interface_declaration: ($) =>
-      seq("interface", field("name", $.type_identifier), optional(seq("{", repeat($._type_member), "}"))),
+      seq("interface", field("name", choice($.type_identifier, $.wit_word)),
+        optional(seq("{", repeat(choice($._type_member, $.wit_interface_member)), "}"))),
+
+    // Embedded WIT (theory/golden/02): `package apsis:io@0.1.0;` headers and
+    // `read-bytes: func(path: string) -> result<string, string>;` members —
+    // hyphenated names, `func` keyword, and result/option generic types.
+    wit_package_declaration: ($) =>
+      seq("package", field("uri", $.import_uri)),
+
+    // `malformed wit { package ns:name@1.0.0  interface x { … } }` — the
+    // embedded WIT sub-language for world contracts (theory/golden/02).
+    // The language has no semicolons; none appear here.
+    wit_block_declaration: ($) =>
+      seq("malformed", "wit", "{",
+        repeat(choice($.wit_package_declaration, $.interface_declaration, $.world_declaration)),
+        "}"),
+
+    wit_interface_member: ($) =>
+      choice(
+        seq(
+          optional("export"),
+          field("name", $.wit_word),
+          ":",
+          "func",
+          "(",
+          commaSep(seq(field("param", $.wit_word), ":", field("type", $.wit_type))),
+          ")",
+          optional(seq("->", field("result", $.wit_type))),
+        ),
+        // `import file-system` inside an interface or world
+        seq("import", field("name", choice($.wit_word, $.import_uri))),
+      ),
+
+    // WIT words: lowercase-start, optional kebab segments (`compiler-host`,
+    // `logger`, `result<string>`, `s64`). Disjoint from Malf type
+    // identifiers (uppercase-start), so worlds like `ClockService` stay
+    // type_identifiers.
+    wit_word: ($) => token(/[a-z][a-zA-Z0-9_]*(-[a-zA-Z0-9]+)*/),
+
+    wit_type: ($) => prec.right(seq(
+      field("name", $.wit_word),
+      optional(seq("<", commaSep(choice($.wit_type, $.hole, "_")), ">")),
+    )),
 
     _type_member: ($) =>
       choice(
@@ -516,7 +582,7 @@ module.exports = grammar({
 
     let_statement: ($) =>
       prec.dynamic(1, seq(
-        choice("let", "const"),
+        choice("let", "let*", "const"),
         optional(field("mode", choice("local", "once", "rec"))),
         field("name", choice($.identifier, $.pattern)),
         optional(seq(":", field("annotation", $._type))),
@@ -566,6 +632,7 @@ module.exports = grammar({
         $.match_expression,
         $.if_expression,
         $.try_expression,
+        $.record_update_expression,
         $.dynamic_binary_expression,
         $.block,
         $.arrow_block,
@@ -603,7 +670,13 @@ module.exports = grammar({
 
     // Skin template: `<[ let $(lhs) : $(ty) = $(rhs) ]>` — statement shapes
     // with splices; the skeleton is template atoms, not parsed code.
-    quote_expression: ($) => seq("<[", repeat(choice($.splice_expression, $.quote_atom)), "]>"),
+    // Templates nest (`<[ fn () -> <[ … ]> ]>`): the nested form outranks
+    // atom-scanning so the inner `]>` closes the inner template.
+    quote_expression: ($) => seq("<[", repeat(choice(
+      prec(1, $.quote_expression),
+      $.splice_expression,
+      $.quote_atom,
+    )), "]>"),
 
     quote_atom: ($) => token(choice(
       /[a-zA-Z_][a-zA-Z0-9_]*/,
@@ -613,6 +686,15 @@ module.exports = grammar({
       /"[^"]*"/,
     )),
     splice_expression: ($) => seq("$(", $._expression, ")"),
+
+    // Record functional update, epoch-2 form: `base with { field: val, … }`
+    // (binds at call level, so `rec_with :: tail` cons takes the whole
+    // update as its left operand).
+    record_update_expression: ($) => prec.left(PREC.CALL, seq(
+      field("base", $._expression),
+      "with",
+      field("fields", $.record_literal),
+    )),
 
     // Bracket indexing: `g.op[i]`, `args[i]`, `x[i][j]` — receivers are
     // value chains (never a bare if/block/list), so a following `[...]`
@@ -645,6 +727,8 @@ module.exports = grammar({
           $.splice_expression,
           $.deref_expression,
           $.poly_variant,
+          // operator section applied to a tuple: `(>>=)(m, f)`
+          $.operator_name,
         )),
         repeat1(choice(
           $.argument_list,
@@ -672,11 +756,11 @@ module.exports = grammar({
       choice(
         prec.left(PREC.PIPE, seq($._expression, choice("|>", "<~", "~>", "<=>"), $._expression)),
         prec.left(PREC.OR, seq($._expression, "||", $._expression)),
-        prec.left(PREC.SHIFT, seq($._expression, choice("<<", ">>"), $._expression)),
+        prec.left(PREC.SHIFT, seq($._expression, choice("<<", ">>", ">>>", "lsl", "asr", "lsr", "land", "lor", "lxor"), $._expression)),
         prec.left(PREC.AND, seq($._expression, "&&", $._expression)),
         prec.left(PREC.COMPARE, seq($._expression, choice("==", "!=", "<", ">", "<=", ">="), $._expression)),
         prec.left(PREC.ADD, seq($._expression, choice("+", "-", "^"), $._expression)),
-        prec.left(PREC.MUL, seq($._expression, choice("*", "/", "%", "**"), $._expression)),
+        prec.left(PREC.MUL, seq($._expression, choice("*", "/", "%", "mod", "**"), $._expression)),
       ),
 
     // Dynamically declared operators (prefix/infixl/infixr prec declarations):
@@ -707,7 +791,7 @@ module.exports = grammar({
         "match",
         field("scrutinee", $._expression),
         "{",
-        repeat1($.match_arm),
+        repeat1(choice($.match_arm, $.handler_arm)),
         "}",
       ),
 
@@ -755,12 +839,12 @@ module.exports = grammar({
             "effect",
             choice(
               seq(
-                field("effect", $.type_identifier),
+                field("effect", choice($.type_identifier, $.identifier)),
                 optional(seq("(", field("arg", $.pattern), ")")),
               ),
               seq(
                 "(",
-                field("effect", $.type_identifier),
+                field("effect", choice($.type_identifier, $.identifier)),
                 optional(field("arg", $.pattern)),
                 ")",
               ),
@@ -775,9 +859,9 @@ module.exports = grammar({
       ),
 
     // Block bodies hold statements/expressions plus member declarations
-    // (nested fns in unified blocks, `@entrypoint` attributes, `;` separators).
+    // (nested fns in unified blocks, `@entrypoint` attributes).
     block: ($) => seq("{",
-      repeat(seq(choice(
+      repeat(choice(
         $._statement,
         $._expression,
         $.function_declaration,
@@ -788,15 +872,12 @@ module.exports = grammar({
         $.export_declaration,
         $.export_star_declaration,
         $.attribute,
-      ), optional(";"))),
+      )),
       "}"),
 
     // `{ op: node.op }`, `{ n = 0, ... }`, shorthand `{ file_id: }` —
     // field separators are commas or just whitespace.
-    // `{ op: node.op }`, `{ n = 0 }`, functional update
-    // `{ table with node_types = ... }` — fields are comma-separated.
     record_literal: ($) => seq("{",
-      optional(seq(field("base", $._expression), "with")),
       optional(","),
       repeat(seq(
         field("name", $.identifier),
