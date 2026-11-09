@@ -67,6 +67,9 @@ module.exports = grammar({
     [$.record_type, $.record_literal],
     [$.record_type],
     [$.record_literal],
+    // `{ x.f… }`: a dotted name may open a record entry (`x.f: 0`) or a UFCS
+    // expression inside a block (`x.f()`); the `:`/`=` separator decides.
+    [$.record_literal, $._expression],
     [$.gadt_variant, $.type_variable],
     [$.type_parameters, $._type],
     [$.effect_arrow_type],
@@ -675,11 +678,11 @@ module.exports = grammar({
     )),
     splice_expression: ($) => seq("$(", $._expression, ")"),
 
-    // Record functional update, epoch-2 form: `base with { field: val, … }`
-    // (binds at call level, so `rec_with :: tail` cons takes the whole
-    // update as its left operand).
+    // Record functional update (`base with { field: val, a.b = val }`)
+    // and in-place record mutation (`base <- with { field: val, a.b = val }`).
     record_update_expression: ($) => prec.left(PREC.CALL, seq(
       field("base", $._expression),
+      optional("<-"),
       "with",
       field("fields", $.record_literal),
     )),
@@ -863,18 +866,18 @@ module.exports = grammar({
       )),
       "}"),
 
-    // `{ op: node.op }`, `{ n = 0, ... }`, shorthand `{ file_id: }` —
+    // `{ op: node.op }`, `{ a.b.c = 0, ... }`, shorthand `{ file_id: }` —
     // field separators are commas or just whitespace.
     record_literal: ($) => seq("{",
       optional(","),
       repeat(seq(
-        field("name", $.identifier),
+        field("name", seq($.identifier, repeat(seq(".", $.identifier)))),
         choice(":", "="),
         field("value", $._expression),
         ",",
       )),
       optional(seq(
-        field("name", $.identifier),
+        field("name", seq($.identifier, repeat(seq(".", $.identifier)))),
         choice(":", "="),
         field("value", $._expression),
       )),
