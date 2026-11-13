@@ -104,6 +104,7 @@ module.exports = grammar({
     [$.call_expression, $.constructor_pattern],
     [$.argument_list, $.constructor_pattern],
     [$.extern_member, $.function_declaration],
+    [$._expression, $.qualified_type],
   ],
 
   extras: ($) => [/\s/, $.comment_line],
@@ -204,15 +205,16 @@ module.exports = grammar({
     export_default_declaration: ($) =>
       seq("export", "default", field("name", choice($.identifier, $.operator_name))),
 
-    // `export * from "std/syntax"`, `export * as Prelude from "std/prelude"`
+    // `export * from "std/syntax"`, `export * as * from ...`, `export * as Prelude from "std/prelude"`
     export_star_declaration: ($) =>
-      seq("export", "*", optional(seq("as", field("alias", $.type_identifier))),
+      seq("export", "*", optional(seq("as", field("alias", choice("*", $.identifier, $.type_identifier)))),
         "from", field("path", choice($.string, $.import_uri, $.identifier))),
 
     // `export { spine_eq, spine_expr_eq } from std:omni/spine` — re-export lists;
     // bare `export { VelocityOp, OpAddInt, … }` re-exports imported names
     export_list_declaration: ($) =>
       seq("export", "{", commaSep(field("item", choice($.identifier, $.type_identifier))), "}",
+        optional(seq("as", field("alias", choice("*", $.identifier, $.type_identifier)))),
         optional(seq("from", field("path", choice($.import_uri, $.string, $.identifier))))),
 
     // `export skin go <=> Ast { ... }` — lexer config, precedence bindings,
@@ -358,7 +360,7 @@ module.exports = grammar({
           "(",
           commaSep(
             choice(
-              seq(optional($.attribute), optional("local"), field("name", choice($.identifier, $.type_identifier)), ":", field("type", $._type)),
+              seq(repeat($.attribute), optional("local"), field("name", choice($.identifier, $.type_identifier)), ":", field("type", $._type)),
               field("type", $._type),
             ),
           ),
@@ -555,21 +557,29 @@ module.exports = grammar({
     implicit_declaration: ($) =>
       seq("implicit", "module", field("name", $.type_identifier), ":", field("signature", $.type_identifier)),
 
-    // `import "std/proj"`, `import { A, B } from "std/syntax"`,
-    // `import { Fixpoint } from velocity:teleos`, and legacy `import foo`
+    // `import "std/proj"`, `import Alias "std/proj"`, `import { A, B } from "std/syntax"`,
+    // `import { A, B } as * from std:omni`, `import * as * from std:proj`, and legacy `import foo`
     import_declaration: ($) =>
-      seq("import",
+      prec.right(seq("import",
         choice(
           field("path", choice($.identifier, $.string, $.import_uri)),
-          // `import * from std:proj`
-          seq("*", optional("from"),
-            field("path", choice($.import_uri, $.string, $.identifier))),
-          seq("{", commaSep(field("item", choice($.identifier, $.type_identifier))), "}",
+          seq(field("alias", choice($.identifier, $.type_identifier)),
+            field("path", choice($.string, $.import_uri))),
+          // `import * from std:proj`, `import * as * from std:proj`, `import * as Alias from std:proj`
+          seq("*",
+            optional(seq("as", field("alias", choice("*", $.identifier, $.type_identifier)))),
             optional("from"),
             field("path", choice($.import_uri, $.string, $.identifier))),
-        )),
+          seq("{", commaSep(field("item", choice($.identifier, $.type_identifier))), "}",
+            optional(seq("as", field("alias", choice("*", $.identifier, $.type_identifier)))),
+            optional("from"),
+            field("path", choice($.import_uri, $.string, $.identifier))),
+        ))),
 
-    import_uri: ($) => token(/[a-z][a-zA-Z0-9_]*(\.[a-z][a-zA-Z0-9_]*)*:[A-Za-z0-9_./#@-]+/),
+    import_uri: ($) => token(choice(
+      /[a-z][a-zA-Z0-9_]*(\.[a-z][a-zA-Z0-9_]*)*:[A-Za-z0-9_./#@-]+/,
+      /\.?\.\/[A-Za-z0-9_./-]+/,
+    )),
 
     let_statement: ($) =>
       prec.dynamic(1, seq(
@@ -607,6 +617,7 @@ module.exports = grammar({
         $.float,
         $.string,
         $.raw_string,
+        $.char,
         $.boolean,
         $.unit,
         $.list,
@@ -653,9 +664,10 @@ module.exports = grammar({
     // Backtick raw strings (string-literal-mode epoch 2+): escape-free,
     // may span lines; longest-match keeps `Tag` constructors working.
     raw_string: ($) => token(seq("`", /[^`]*/, "`")),
+    char: ($) => seq("'", choice($.escape_sequence, /[^'\\\n]/), "'"),
     // Lexical precedence above the `//` comment extra: `"//"` stays a string.
     _string_content: ($) => token(prec(PREC.STRING, /[^\n"\\]+/)),
-    escape_sequence: ($) => /\\[nrt\\"']/,
+    escape_sequence: ($) => /\\([nrt0\\"']|x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]+\})/,
 
     list: ($) => seq("[", commaSep($._expression), "]"),
 
@@ -671,7 +683,7 @@ module.exports = grammar({
 
     quote_atom: ($) => token(choice(
       /[a-zA-Z_][a-zA-Z0-9_]*/,
-      /[+\-*/%<>=!&|:;,.?@^~]+/,
+      /[+\-*/%<>=!&|:;,.?@^~']+/,
       /[()\[\]{}]/,
       /[0-9]+/,
       /"[^"]*"/,
@@ -680,7 +692,7 @@ module.exports = grammar({
 
     // Record functional update (`base with { field: val, a.b = val }`)
     // and in-place record mutation (`base <- with { field: val, a.b = val }`).
-    record_update_expression: ($) => prec.left(PREC.CALL, seq(
+    record_update_expression: ($) => prec.left(PREC.ASSIGN, seq(
       field("base", $._expression),
       optional("<-"),
       "with",
@@ -729,11 +741,11 @@ module.exports = grammar({
 
     argument_list: ($) => seq("(", commaSep($._expression), ")"),
 
-    // `r.method(x)`, field chains `res.red.green_id`, index access `args.(i)`
+    // `r.method(x)`, field chains `res.red.green_id`, index access `args.(i)`, `Pkg.Ctor(x)`
     ufcs_expression: ($) =>
       prec.right(PREC.CALL, seq(field("receiver", $._expression), ".",
         choice(
-          seq(field("method", $.identifier), optional($.argument_list)),
+          seq(field("method", choice($.identifier, $.type_identifier)), optional($.argument_list)),
           $.argument_list,
         ))),
 
@@ -771,7 +783,7 @@ module.exports = grammar({
     assignment: ($) =>
       prec.right(
         PREC.ASSIGN,
-        seq(field("name", $.identifier), choice(":=", "<-"), field("value", $._expression)),
+        seq(field("target", $._expression), choice(":=", "<-"), field("value", $._expression)),
       ),
 
     deref_expression: ($) =>
@@ -789,7 +801,7 @@ module.exports = grammar({
     match_arm: ($) =>
       seq("|", field("pattern", $.pattern),
         optional(seq("if", field("guard", $._expression))),
-        "->", field("body", $._expression)),
+        "->", field("body", choice($._expression, prec.right(seq(repeat1($._statement), $._expression))))),
 
     if_expression: ($) =>
       choice(
@@ -938,7 +950,10 @@ module.exports = grammar({
       prec(PREC.UNARY, seq("(", field("pat", $.pattern), ":", field("type", $._type), ")")),
     constructor_pattern: ($) =>
       seq(
-        field("constructor", $.type_identifier),
+        field("constructor", choice(
+          $.type_identifier,
+          seq(choice($.identifier, $.type_identifier), ".", $.type_identifier),
+        )),
         optional(choice(
           seq("(", commaSep($.pattern), ")"),
           repeat1(field("arg", choice($.identifier, $.wildcard_pattern, $.string, $.integer, $.boolean))),
@@ -947,10 +962,15 @@ module.exports = grammar({
 
     // ============================ types ===================================
 
+    qualified_type: ($) =>
+      seq(choice($.identifier, $.type_identifier), ".", $.type_identifier),
+
     _type: ($) =>
       choice(
+        $.qualified_type,
         $.type_identifier,
         $.type_variable,
+        $.tick_type_variable,
         $.generic_type,
         $.unit_type,
         $.tuple_type,
@@ -978,6 +998,9 @@ module.exports = grammar({
 
     // Lowercase abstract type names, e.g. interface member `t` in `(a: t)`.
     type_variable: ($) => $.identifier,
+
+    // Tick-quoted type variable, e.g. `'a -> Code<Int -> Int>`.
+    tick_type_variable: ($) => seq("'", $.identifier),
 
     type_identifier: ($) => /[A-Z][a-zA-Z0-9_]*/,
 
